@@ -1,0 +1,221 @@
+{# Copyright (c) 2021 André Santos
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. #}
+
+{##############################################################################}
+{#  Predicate Translation Macros                                              #}
+{##############################################################################}
+
+{# Receives a HplPredicate object. #}
+{% macro inline_predicate(pred, msg) -%}
+{% if pred.is_vacuous -%}
+    {% if pred.is_true -%}
+True
+    {%- else -%}
+False
+    {%- endif %}
+{%- else -%}
+{{ _inline_expression(pred.condition, msg) }}
+{%- endif %}
+{%- endmacro %}
+
+{##############################################################################}
+{#  Big Switch                                                                #}
+{##############################################################################}
+
+{% macro _inline_expression(expr, msg) -%}
+{% if expr.is_value -%}
+{{ _values(expr, msg) }}
+{%- elif expr.is_accessor -%}
+{{ _accessors(expr, msg) }}
+{%- elif expr.is_operator -%}
+{{ _operators(expr, msg) }}
+{%- elif expr.is_function_call -%}
+{{ _fun_call(expr, msg) }}
+{%- elif expr.is_quantifier -%}
+{{ _quantifier(expr, msg) }}
+{%- else -%}
+ValueError("{{ expr }}")
+{%- endif %}
+{%- endmacro %}
+
+{% macro _values(expr, msg) -%}
+{% if expr.is_literal -%}
+{{ _literal(expr) }}
+{%- elif expr.is_set -%}
+{{ _set_literal(expr, msg) }}
+{%- elif expr.is_range -%}
+{{ _range_literal(expr, msg) }}
+{%- elif expr.is_reference -%}
+    {% if expr.is_this_msg -%}
+{{ _this_message(expr, msg) }}
+    {%- elif expr.is_variable -%}
+{{ _var_reference(expr) }}
+    {%- else -%}
+ValueError("{{ expr }}")
+    {%- endif %}
+{%- else -%}
+ValueError("{{ expr }}")
+{%- endif %}
+{%- endmacro %}
+
+{% macro _accessors(expr, msg) -%}
+{% if expr.is_field -%}
+{{ _field_access(expr, msg) }}
+{%- elif expr.is_indexed -%}
+{{ _array_access(expr, msg) }}
+{%- else -%}
+ValueError("{{ expr }}")
+{%- endif %}
+{%- endmacro %}
+
+{% macro _operators(expr, msg) -%}
+{% if expr.arity == 1 -%}
+{{ _unary_op(expr, msg) }}
+{%- elif expr.arity == 2 -%}
+{{ _binary_op(expr, msg) }}
+{%- else -%}
+ValueError("{{ expr }}")
+{%- endif %}
+{%- endmacro %}
+
+
+{##############################################################################}
+{#  Atomic Values                                                             #}
+{##############################################################################}
+
+{% macro _literal(v) -%}
+{{ v.value }}
+{%- endmacro %}
+
+{% macro _this_message(v, msg) -%}
+{{ msg }}
+{%- endmacro %}
+
+{% macro _var_reference(v) -%}
+v_{{ v.name }}
+{%- endmacro %}
+
+
+{##############################################################################}
+{#  Compound Values                                                           #}
+{##############################################################################}
+
+{% macro _set_literal(v, msg) -%}
+{% set comma = joiner(', ') %}
+({% for value in v.values %}{# -#}
+{{ comma() }}{{ _inline_expression(value, msg) }}{# -#}
+{% endfor %})
+{%- endmacro %}
+
+{% macro _range_literal(v, msg) -%}
+{% set l -%}
+int({{ _inline_expression(v.min_value, msg) }}){# -#}
+    {% if v.exclude_min -%}
++1
+    {%- endif %}
+{%- endset %}
+{% set h -%}
+int({{ _inline_expression(v.max_value, msg) }}){# -#}
+    {% if not v.exclude_max -%}
++1
+    {%- endif %}
+{%- endset %}
+range({{ l }}, {{ h }})
+{%- endmacro %}
+
+
+{##############################################################################}
+{#  Message Field Access                                                      #}
+{##############################################################################}
+
+{% macro _field_access(ref, msg) -%}
+{{ _inline_expression(ref.message, msg) }}.{{ ref.field }}
+{%- endmacro %}
+
+{% macro _array_access(ref, msg) -%}
+{{ _inline_expression(ref.array, msg) }}{# -#}
+[{{ _inline_expression(ref.index, msg) }}]
+{%- endmacro %}
+
+
+{##############################################################################}
+{#  Operators and Functions                                                   #}
+{##############################################################################}
+
+{% macro _unary_op(op, msg) -%}
+{% if op.operator == '-' -%}
+-{{ _inline_expression(op.operand, msg) }}
+{%- else -%}
+({{ op.operator }} {{ _inline_expression(op.operand, msg) }})
+{%- endif %}
+{%- endmacro %}
+
+{% macro _binary_op(op, msg) -%}
+{% set a = _inline_expression(op.operand1, msg) %}
+{% set b = _inline_expression(op.operand2, msg) %}
+{% if op.operator == 'implies' -%}
+(not {{ a }} or {{ b }})
+{%- elif op.operator == 'iff' -%}
+({{ a }} is {{ b }})
+{%- elif op.operator == '=' -%}
+({{ a }} == {{ b }})
+{%- else -%}
+    {%- if op.infix -%}
+({{ a }} {{ op.operator }} {{ b }})
+    {%- else -%}
+{{ op.operator }}({{ a }}, {{ b }})
+    {%- endif %}
+{%- endif %}
+{%- endmacro %}
+
+{# ensure that `def prod(iterable)` is available #}
+{% macro _fun_call(f, msg) -%}
+{% set comma = joiner(', ') %}
+{{ f.function }}{# -#}
+({% for arg in f.arguments %}{# -#}
+{{ comma() }}{{ _inline_expression(arg, msg) }}{# -#}
+{% endfor %})
+{%- endmacro %}
+
+
+{##############################################################################}
+{#  Quantifiers                                                               #}
+{##############################################################################}
+
+{% macro _quantifier(q, msg) -%}
+{{ _q_fun(q) }}({{ _inline_expression(q.condition, msg) }} {# -#}
+for v_{{ q.variable }} in {{ _q_dom(q, msg }})
+{%- endmacro %}
+
+{% macro _q_fun(q) -%}
+{% if q.is_universal -%}
+all
+{%- else -%}
+any
+{%- endif %}
+{%- endmacro %}
+
+{% macro _q_dom(q, msg) -%}
+{% if q.domain.can_be_array -%}
+range(len({{ _inline_expression(q.domain, msg) }}))
+{%- else -%}
+{{ _inline_expression(q.domain, msg) }}
+{%- endif %}
+{%- endmacro %}
