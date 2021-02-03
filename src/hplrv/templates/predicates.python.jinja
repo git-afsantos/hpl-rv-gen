@@ -185,7 +185,7 @@ range({{ l }}, {{ h }})
 
 {% macro _quantifier(q, msg) -%}
 {{ _q_fun(q) }}({{ _inline_expression(q.condition, msg) }} {# -#}
-for v_{{ q.variable }} in {{ _q_dom(q, msg }})
+for v_{{ q.variable }} in {{ _q_dom(q, msg) }})
 {%- endmacro %}
 
 {% macro _q_fun(q) -%}

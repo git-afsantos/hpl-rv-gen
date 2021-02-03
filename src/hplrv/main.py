@@ -8,7 +8,9 @@
 # Imports
 ###############################################################################
 
-from jinja2 import Environment, PackageLoader
+from __future__ import print_function
+
+from .rendering import TemplateRenderer
 
 
 ###############################################################################
@@ -78,3 +80,39 @@ def main(args):
                 text = f.read().strip()
             props = parse_property_file(text)
     gen_monitor_nodes(props, output_dir)
+
+
+
+EXAMPLES = [
+    '''
+    # id: p1
+    # title: "My First Property"
+    # description: "This is a test property to be transformed into a monitor."
+    globally: no /ns/topic {data > 0}
+    ''',
+
+    'globally: no /ns/topic {data > 0} within 100 ms',
+
+    'after /p: no /b {data > 0} within 100 ms',
+
+    'after /p as P: no /b {data > @P.data}',
+
+    'until /q {phi}: no /b {data > 0} within 100 ms',
+
+    'after /p as P until /q {phi and (not @P.psi)}: no /b {forall i in array: array[@i] > 0}',
+]
+
+def test_me():
+    from hpl.parser import property_parser
+    p = property_parser()
+    r = TemplateRenderer()
+    outputs = []
+    for text in EXAMPLES:
+        hpl_property = p.parse(text)
+        code = r.render_monitor(hpl_property)
+        outputs.append(code)
+    print('\n\n'.join(code for code in outputs))
+
+
+if __name__ == '__main__':
+    test_me()

@@ -57,6 +57,9 @@ def new_trigger(phi, activator):
     return TriggerEvent(EVENT_TRIGGER, phi, activator)
 
 
+def _default_dict_of_lists():
+    return defaultdict(list)
+
 ###############################################################################
 # Absence State Machine
 ###############################################################################
@@ -78,7 +81,7 @@ class AbsenceBuilder(object):
         if self.timeout == INF:
             self.timeout = -1
         self.pool_size = 0
-        self.on_msg = defaultdict(defaultdict(list))
+        self.on_msg = defaultdict(_default_dict_of_lists)
         if hpl_property.scope.is_global:
             self.initial_state = STATE_ACTIVE
             self.collapse_safe = True
@@ -98,7 +101,7 @@ class AbsenceBuilder(object):
             self.add_terminator(hpl_property.scope.terminator)
         else:
             raise ValueError('unknown scope: ' + str(hpl_property.scope))
-        self.behaviour(hpl_property.pattern.behaviour)
+        self.add_behaviour(hpl_property.pattern.behaviour)
 
     @property
     def has_safe_state(self):
