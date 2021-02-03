@@ -1,0 +1,564 @@
+{% import 'predicates.python.jinja' as predicates %}
+
+{# predicates.inline_predicate(pred_ast_node, cur_msg_var_name) #}
+
+{# from __future__ import unicode_literals #}
+{# from builtins import object #}
+{# from collections import deque, namedtuple #}
+{# from threading import Lock #}
+
+{# MsgRecord = namedtuple("MsgRecord", ('topic', 'timestamp', 'msg')) #}
+
+{# Global variables #}
+{% set STATE_OFF = 0 %}
+{% set STATE_TRUE = -1 %}
+{% set STATE_FALSE = -2 %}
+
+
+{% macro state_machine(sm) %}
+class {{ _class_name(sm) }}(object):
+    __slots__ = (
+        '_lock',          # concurrency control
+        '_states',        # list of state handler objects
+        '_cur_state',     # currently active state handler
+        '_pool',          # MsgRecord deque to hold temporary records
+        'witness',        # MsgRecord list of observed events
+        'on_enter_scope', # callback upon entering the scope
+        'on_exit_scope',  # callback upon exiting the scope
+        'on_violation',   # callback upon verdict of False
+        'on_success',     # callback upon verdict of True
+        'time_launch',    # when was the monitor launched
+        'time_shutdown',  # when was the monitor shutdown
+        'time_state',     # when did the last state transition occur
+        # event aliases
+        {% for alias in sm.aliases %}
+        '_msg_{{ alias }}',
+        {% endfor %}
+    )
+
+    PROP_ID = '{{ sm.p_id }}'
+    PROP_TITLE = '''{{ sm.p_title|d('HPL Property') }}'''
+    PROP_DESC = '''{{ sm.p_desc|d('') }}'''
+    HPL_PROPERTY = r'''{{ sm.p_text }}'''
+
+    def __init__(self):
+        self._lock = Lock()
+        self._reset()
+        self.on_enter_scope = self._noop
+        self.on_exit_scope = self._noop
+        self.on_violation = self._noop
+        self.on_success = self._noop
+        self._states = [
+            self.MonitorOff(),
+    {% for key in sm.states %}
+            self.StateHandler{{ key }}(self),
+    {% endfor %}
+            self.VerdictFalse(self),
+            self.VerdictTrue(self)
+        ]
+        self._cur_state = self._states[{{ STATE_OFF }}]
+
+{{ _on_launch(sm)|indent(4, first=true) }}
+
+{{ _on_shutdown(sm)|indent(4, first=true) }}
+
+    def on_timer(self, stamp):
+        with self._lock:
+            self._update(stamp)
+
+{{ _update_monitor(sm)|indent(4, first=true) }}
+
+    {% for topic, cbi in sm.on_msg.items() %}
+{{ _on_msg(sm, topic, cbi)|indent(4, first=true) }}
+    {% endfor %}
+
+    def _reset(self):
+        self.witness = []
+        self._pool = deque()
+        {% for alias in sm.aliases %}
+        self._msg_{{ alias }} = None
+        {% endfor %}
+        self.time_launch = -1
+        self.time_shutdown = -1
+        self.time_state = -1
+
+    def _jump_to(self, i, stamp, enters_scope=False, exits_scope=False):
+        if enters_scope:
+            self.on_enter_scope()
+        elif exits_scope:
+            self.on_exit_scope()
+        self._cur_state = self._states[i]
+        self.time_state = stamp
+        self._cur_state.enter()
+
+    def _noop(self, *args):
+        pass
+
+{{ _generic_state_handlers(sm)|indent(4, first=true) }}
+
+    {% for key, state in sm.states.items() %}
+{{ _state_handler(sm, key, state)|indent(4, first=true) }}
+    {% endfor %}
+{% endmacro %}
+
+{% macro _class_name(sm) -%}
+    {% if sm.class_name -%}
+{{ sm.class_name }}
+    {%- else -%}
+PropertyMonitor
+    {%- endif %}
+{%- endmacro %}
+
+
+
+
+
+
+
+
+{# input requires #}
+{#  - hpl_property: HPL Property AST node #}
+{% macro from_property(hpl_property, class_name='Monitor') %}
+{% if hpl_property.pattern.is_absence %}
+{{ _absence(hpl_property, class_name) }}
+{% elif hpl_property.pattern.is_existence %}
+{{ _existence(hpl_property, class_name) }}
+{% elif hpl_property.pattern.is_requirement %}
+{{ _requirement(hpl_property, class_name) }}
+{% elif hpl_property.pattern.is_response %}
+{{ _response(hpl_property, class_name) }}
+{% elif hpl_property.pattern.is_prevention %}
+{{ _prevention(hpl_property, class_name) }}
+{% else %}
+raise NotImplementedError('unknown property pattern: {{ hpl_property.pattern.pattern_type }}')
+{% endif %}
+{% endmacro %}
+
+
+
+
+
+
+{##############################################################################}
+{# NESTED CLASSES #}
+{##############################################################################}
+
+
+{% macro _generic_state_handlers(sm) -%}
+class StateHandler(object):
+    @property
+    def verdict(self):
+        return None
+
+    def enter(self):
+        pass
+
+    def on_timer(self, stamp):
+        return None
+    {% for topic in sm.topics %}
+
+    def on_msg_{{ topic|replace('/', '_') }}(self, msg, stamp):
+        return None
+    {% endfor %}
+
+class MonitorOff(StateHandler):
+    __slots__ = ()
+
+class VerdictFalse(StateHandler):
+    __slots__ = ('sm',)
+
+    def __init__(self, sm):
+        self.sm = sm
+
+    @property
+    def verdict(self):
+        return False
+
+    def enter(self):
+        self.sm.on_violation(self.sm.witness)
+
+class VerdictTrue(StateHandler):
+    __slots__ = ('sm',)
+
+    def __init__(self, sm):
+        self.sm = sm
+
+    @property
+    def verdict(self):
+        return True
+
+    def enter(self):
+        self.sm.on_success(self.sm.witness)
+{%- endmacro %}
+
+
+{% macro _state_handler(sm, key, state) -%}
+class StateHandler{{ key }}(StateHandler):
+    __slots__ = ('sm',)
+
+    def __init__(self, sm):
+        self.sm = sm
+
+    {% if not state.on_enter.skippable %}
+    def enter(self):
+        {% if state.on_enter.empties_records %}
+        self.sm.witness.clear()
+        {% endif %}
+        {% if state.on_enter.empties_pool %}
+        self.sm._pool.clear()
+        {% endif %}
+    {% endif %}
+
+{{ _state_on_timer(state.on_timer)|indent(4, first=true) }}
+{{ _state_on_msg(state.on_msg)|indent(4, first=true) }}
+{%- endmacro %}
+
+
+{% macro _state_on_timer(cb) %}
+def on_timer(self, stamp):
+    {% if cb.is_noop -%}
+    pass
+    {%- else -%}
+    m = self.sm
+        {% if cb.pool_duration >= 0 %}
+    while m._pool and (stamp - m._pool[0].timestamp) >= {{ cb.pool_duration }}:
+        m._pool.popleft()
+        {% endif %}
+        {% if cb.state_duration >= 0 %}
+    if (stamp - m.time_state) >= {{ cb.state_duration }}:
+            {% if cb.empties_records -%}
+        m.witness.clear()
+            {%- endif %}
+            {% if cb.empties_pool -%}
+        m._pool.clear()
+            {%- endif %}
+{{ _jump(cb)|indent(8|first=true) }}
+            return
+        {% endif %}
+    {%- endif %}
+{% endmacro %}
+
+{% macro _state_on_msg(on_msg) -%}
+    {% for topic, cbs in on_msg.items() %}
+
+def on_msg_{{ topic|replace('/', '_') }}(self, msg, stamp):
+    self.on_timer(stamp)
+        {% for cb in cbs %}
+{# FIXME #}
+        {% endfor %}
+    return None
+    {% endfor %}
+{%- endmacro %}
+
+
+{# assumes `stamp` to be available #}
+{% macro _jump(cb) -%}
+    {% if cb.jumps_to != STATE_OFF %}
+        {% if cb.jump_if_pool_empty %}
+if len(self.sm._pool) == 0:
+    self.sm._jump_to({{ cb.jumps_to }}, stamp, enters_scope={{ cb.enters_scope }},
+                     exits_scope={{ cb.exits_scope }})
+        {% elif cb.jump_if_pool_not_empty %}
+if len(self.sm._pool) > 0:
+    self.sm._jump_to({{ cb.jumps_to }}, stamp, enters_scope={{ cb.enters_scope }},
+                     exits_scope={{ cb.exits_scope }})
+        {% else %}
+self.sm._jump_to({{ cb.jumps_to }}, stamp, enters_scope={{ cb.enters_scope }},
+                 exits_scope={{ cb.exits_scope }})
+        {% endif %}
+    {% else %}
+raise AssertionError('unexpected jump to OFF')
+    {% endif %}
+{%- endmacro %}
+
+
+{##############################################################################}
+{# COMMON #}
+{##############################################################################}
+
+{# scope AST node and first non-Inactive state #}
+{% macro _on_launch(sm) -%}
+    {% set cbi = sm.on_launch %}
+def on_launch(self, stamp):
+    with self._lock:
+        if self._state != {{ STATE_OFF }}:
+            raise RuntimeError('monitor already launched')
+        self._reset()
+        self.time_launch = stamp
+{{ _jump(sm.on_launch.jump)|indent(8, first=true) }}
+{%- endmacro %}
+
+{# scope AST node #}
+{% macro _on_shutdown(sm) -%}
+    {% set cbi = sm.on_shutdown %}
+def _on_shutdown(self, stamp):
+    with self._lock:
+        if self._state == {{ STATE_OFF }}:
+            raise RuntimeError('monitor already off')
+        self.time_shutdown = stamp
+        self._state = {{ STATE_OFF }}
+        self.time_state = stamp
+    {% if cbi.exits_scope %}
+{{ _exit_scope()|indent(8, first=true) }}
+    {% endif %}
+{{ _verdict(cbi.verdict)|indent(8, first=true) }}
+{%- endmacro %}
+
+{% macro _update_monitor(sm) -%}
+    {% set cbi = sm.update %}
+def _update(self, stamp):
+    timed_out = False
+    while self._pool and (stamp - self._pool[0].timestamp) >= {{ cbi.pool_timeout }}:
+        timed_out = True
+        self._pool.popleft()
+    {% for jump in cbi.jumps %}
+{{ _timed_jump(jump, returns=true) }}
+    {% endfor %}
+    return False
+{%- endmacro %}
+
+
+{% macro _on_msg(sm, topic, cbi) -%}
+def _on_msg_{{ topic|replace('/', '_') }}(self, msg, stamp):
+    if self._update(stamp):
+        return True
+    {% for jump in cbi.jumps %}
+        {% set op = jump.__class__.__name__ %}
+        {% if op == 'JPC' -%}
+{{ _cond_jump(jump, topic, returns=true)|indent(4, first=true) }}
+        {%- elif op == 'JPCP' -%}
+{{ _jump_pool(jump, topic, returns=true)|indent(4, first=true) }}
+        {%- else -%}
+    assert False, 'unknown jump type: {{ op }}'
+        {%- endif %}
+    {% endfor %}
+    return False
+{%- endmacro %}
+
+
+
+{% macro _jump(jp, returns=false) -%}
+self._state = {{ jp.to_state }}
+self.time_state = stamp
+    {% if jp.empties_pool %}
+self._pool.clear()
+    {% endif %}
+    {% if jp.to_state < STATE_OFF %}
+    {# terminal state #}
+        {% if jp.exits_scope %}
+{{ _exit_scope() }}
+        {% endif %}
+{{ _verdict(jp.verdict) }}
+    {% else %}
+    {# non-terminal state #}
+        {% if jp.enters_scope %}
+{{ _enter_scope() }}
+        {% elif jp.exits_scope %}
+{{ _exit_scope() }}
+        {% endif %}
+    {% endif %}
+    {% if returns %}
+return True
+    {% endif %}
+{%- endmacro %}
+
+
+{% macro _cond_jump(jpc, topic, returns=true) %}
+    {% if jpc.predicate.is_vacuous %}
+        {% if jpc.predicate.is_true %}
+if self._state == {{ jpc.if_state }}:
+        {% if jpc.store_in_pool %}
+{{ _store_in_pool(topic)|indent(4, first=true) }}
+        {% else %}
+    self.records.append(MsgRecord('{{ topic }}', stamp, msg))
+        {% endif %}
+{{ _jump(jpcp, returns=returns)|indent(4, first=true) }}
+        {% endif %}
+    {% else %}
+        {% set phi = predicates.inline_predicate(jpc.predicate, 'msg') %}
+if self._state == {{ jpc.if_state }} and {{ phi }}:
+        {% if jpc.store_in_pool %}
+{{ _store_in_pool(topic)|indent(4, first=true) }}
+        {% else %}
+    self.records.append(MsgRecord('{{ topic }}', stamp, msg))
+        {% endif %}
+{{ _jump(jpcp, returns=returns)|indent(4, first=true) }}
+    {% endif %}
+{% endmacro %}
+
+
+{% macro _jump_pool(jpcp, topic, returns=true) %}
+    {% if jpcp.predicate.is_vacuous %}
+        {% if jpcp.predicate.is_true %}
+if self._state == {{ jpcp.if_state }}:
+    self.records.append(MsgRecord('{{ topic }}', stamp, msg))
+{{ _jump(jpcp, returns=returns)|indent(4, first=true) }}
+        {% endif %}
+    {% else %}
+        {% set phi = predicates.inline_predicate(jpcp.predicate, 'msg') %}
+if self._state == {{ jpcp.if_state }}:
+    match = None
+    for i in range(len(self._pool) - 1, -1, -1): # reverse so we can pop
+        r = self._pool[i]
+        msg_{{ jpcp.pool_var }} = r.msg
+        if {{ phi }}:
+            match = r
+        {% if jpcp.drop_matches %}
+            self._pool.pop(i)
+        {% endif %}
+        {% if jpcp.match_first %}
+            break
+        {% endif %}
+    if match:
+        self.records.append(match)
+        self.records.append(MsgRecord('{{ topic }}', stamp, msg))
+{{ _jump(jpcp, returns=returns)|indent(8, first=true) }}
+    {% endif %}
+{% endmacro %}
+
+
+{% macro _timed_jump(jpt, returns=true) -%}
+if self._state == {{ jpt.if_state }} and (stamp - self.time_state) >= {{ jpt.timeout }}:
+{{ _jump(jpt, returns=returns)|indent(4, first=true) }}
+{%- endmacro %}
+
+
+{% macro _enter_scope() -%}
+self._within_scope = True
+self.on_enter_scope()
+{%- endmacro %}
+
+{% macro _exit_scope() -%}
+self._within_scope = False
+self.on_exit_scope()
+{%- endmacro %}
+
+{% macro _verdict(v) -%}
+    {% if v > 0 -%}
+self.on_success()
+    {%- elif v < 0 -%}
+self.on_violation()
+    {%- else -%}
+assert False, "unknown verdict in terminal state"
+    {%- endif %}
+{%- endmacro %}
+
+{% macro _store_in_pool(topic) -%}
+r = MsgRecord('{{ topic }}', stamp, msg)
+for i in range(len(self._pool), 0, -1):
+    if stamp >= self._pool[i-1].timestamp:
+        self._pool.insert(i, r)
+        break
+else:
+    self._pool.appendleft(r)
+{%- endmacro %}
+
+
+
+
+
+{% macro monitor_class(hpl_property, class_name='Monitor') %}
+class {{ class_name }}(object):
+    __slots__ = ('_lock', 'activator', 'terminator', 'triggers', 'behaviour',
+                 'on_enter_scope', 'on_exit_scope', 'on_violation',
+                 'on_success', 'time_launch', 'time_shutdown', '_state')
+
+    PROP_ID = '{{ hpl_property.metadata.get('id') }}'
+    PROP_TITLE = '''{{ hpl_property.metadata.get('title', 'HPL Property') }}'''
+    PROP_DESC = '''{{ hpl_property.metadata.get('description', '') }}'''
+    HPL_PROPERTY = r'''{{ hpl_property|string }}'''
+
+    def __init__(self):
+        self._lock = Lock()
+        self.on_enter_scope = None  # callback function
+        self.on_exit_scope = None   # callback function
+        self.on_violation = None    # callback function
+        self.on_success = None      # callback function
+        self.activator = None       #  MsgRecord    # must be list for chains
+        self.terminator = None      #  MsgRecord    # irrelevant for some counterexamples
+        self.triggers = deque()     # [MsgRecord]   # sorted by timestamp
+        self.behaviour = None       #  MsgRecord
+        self.launch_time = 0
+
+    @property
+    def is_active(self):
+        with self._lock:
+            return self.activator is not None
+
+    def _predicate_1(self, msg):
+        return True
+
+    def _predicate_2(self, msg):
+        return True
+
+    def _predicate_3(self, msg):
+        assert self.activator is not None
+        return msg.x > self.activator.msg.value
+
+    def _predicate_4(self, msg):
+        for _topic, _stamp, v_Trigger in self.triggers:
+            if msg.y > v_Trigger.x:
+                return True
+        return False
+
+    def on_activator(self, msg, stamp):
+        with self._lock:
+            if self.activator is None and self._predicate_1(msg):
+                self.activator = MsgRecord('activator', stamp, msg)
+                self.on_enter_scope()
+
+    def on_terminator(self, msg, stamp):
+        with self._lock:
+            if self.activator is not None and self._predicate_2(msg):
+                self.terminator = MsgRecord('terminator', stamp, msg)
+                self.on_exit_scope()
+                # if violation ...
+                # else:
+                self.activator = None
+                self.triggers.clear()
+                self.behaviour = None
+                self.terminator = None
+
+    def on_trigger(self, msg, stamp):
+        with self._lock:
+            if self.activator is not None and self._predicate_3(msg):
+                r = MsgRecord('trigger', stamp, msg)
+                for i in range(len(self.triggers), 0, -1):
+                    if stamp >= self.triggers[i-1].timestamp:
+                        self.triggers.insert(i, r)
+                        break
+                else:
+                    self.triggers.appendleft(r)
+
+    def on_behaviour(self, msg, stamp):
+        with self._lock:
+            if self.activator is not None and self._predicate_4(msg):
+                # if violation
+                self.behaviour = MsgRecord('behaviour', stamp, msg)
+                self.on_violation()
+                # else if success
+                self.behaviour = MsgRecord('behaviour', stamp, msg)
+                self.on_success()
+
+    def on_msg_topic_name(self, msg, stamp):
+        with self._lock:
+            if self._state == {{ STATE_INACTIVE }}:
+                pass
+            elif self._state == {{ STATE_ACTIVE }}:
+                pass
+            elif self._state == {{ STATE_SAFE }}:
+                pass
+
+    def _update(self, stamp):
+        pass
+        # transition to safe?
+        # discard old triggers?
+
+    def _reset(self):
+        self.time_launch = -1
+        self.time_shutdown = -1
+        self.activator = None
+        self.terminator = None
+        self.triggers = deque()
+        self.behaviour = None
+{% endmacro %}
