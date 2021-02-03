@@ -1,0 +1,78 @@
+{# SPDX-License-Identifier: MIT #}
+{# Copyright © 2021 André Santos #}
+
+{% import 'common.python.jinja' as G %}
+
+{##############################################################################}
+{# TIMER MACROS #}
+{##############################################################################}
+
+{% macro _on_timer(sm) -%}
+def on_timer(self, stamp):
+    {% if sm.timeout > 0.0 -%}
+    with self._lock:
+        if self._state == {{ G.STATE_ACTIVE }} and (stamp - self.time_state) >= {{ sm.timeout }}:
+            {% if sm.collapse_safe -%}
+            {{ G.change_to_state(G.STATE_TRUE)|indent(12) }}
+            {%- else -%}
+            {{ G.change_to_state(G.STATE_SAFE)|indent(12) }}
+            {%- endif %}
+    {%- else -%}
+    pass
+    {%- endif %}
+{%- endmacro %}
+
+
+{##############################################################################}
+{# MSG EVENT MACROS #}
+{##############################################################################}
+
+{% macro _on_msg(event, topic) -%}
+{% if event.event_type == G.EVENT_ACTIVATOR -%}
+{# after or after-until -#}
+    {% call G.change_to_state_if(event.predicate, G.STATE_ACTIVE) -%}
+self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
+    {%- endcall %}
+{%- elif event.event_type == G.EVENT_TERMINATOR -%}
+{# until or after-until -#}
+    {% if event.activator -%}
+assert len(self.witness) >= 1, 'missing activator'
+msg_{{ event.activator }} = self.witness[0].msg
+    {%- endif %}
+    {% if event.verdict -%}
+        {% call G.change_to_state_if(event.predicate, G.STATE_TRUE) -%}
+self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
+        {%- endcall %}
+    {%- else -%}
+        {% call G.change_to_state_if(event.predicate, G.STATE_INACTIVE) -%}
+self.witness = []
+        {%- endcall %}
+    {%- endif -%}
+{%- elif event.event_type == G.EVENT_BEHAVIOUR -%}
+    {% if event.activator -%}
+assert len(self.witness) >= 1, 'missing activator'
+msg_{{ event.activator }} = self.witness[0].msg
+    {%- endif %}
+    {% call G.change_to_state_if(event.predicate, G.STATE_FALSE) -%}
+self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
+    {%- endcall %}
+{%- else -%}
+assert False, 'unexpected event type: {{ event.event_type }}'
+{%- endif %}
+{%- endmacro %}
+
+
+{##############################################################################}
+{# RENDERED CODE #}
+{##############################################################################}
+
+{# assume: global('state_machine') #}
+{% call(cb) G.state_machine(state_machine) -%}
+    {% if cb == G.CALLBACK_TIMER -%}
+{{ _on_timer(state_machine) }}
+    {%- elif cb == G.CALLBACK_MSG -%}
+{{ _on_msg(varargs[0], varargs[1]) }}
+    {%- else -%}
+assert False, 'unexpected macro function type: {{ args }}'
+    {%- endif %}
+{%- endcall %}

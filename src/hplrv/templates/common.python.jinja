@@ -1,0 +1,157 @@
+{# SPDX-License-Identifier: MIT #}
+{# Copyright © 2021 André Santos #}
+
+{% import 'predicates.python.jinja' as P %}
+
+{# P.inline_predicate(pred_ast_node, cur_msg_var_name) #}
+
+{##############################################################################}
+{# GLOBAL VARIABLES #}
+{##############################################################################}
+
+{% set STATE_OFF = 0 %}
+{% set STATE_TRUE = -1 %}
+{% set STATE_FALSE = -2 %}
+{% set STATE_INACTIVE = 1 %}
+{% set STATE_ACTIVE = 2 %}
+{% set STATE_SAFE = 3 %}
+
+{% set EVENT_OTHER = 0 %}
+{% set EVENT_ACTIVATOR = 1 %}
+{% set EVENT_TERMINATOR = 2 %}
+{% set EVENT_BEHAVIOUR = 3 %}
+{% set EVENT_TRIGGER = 4 %}
+
+{% set CALLBACK_TIMER = 1 %}
+{% set CALLBACK_MSG = 2 %}
+
+{##############################################################################}
+{# PUBLIC MACROS #}
+{##############################################################################}
+
+{# from __future__ import unicode_literals #}
+{# from builtins import object #}
+{# from collections import deque, namedtuple #}
+{# from threading import Lock #}
+
+{# MsgRecord = namedtuple("MsgRecord", ('topic', 'timestamp', 'msg')) #}
+
+{# meant to be used with call #}
+{% macro state_machine(sm) -%}
+class {{ sm.class_name }}(object):
+    __slots__ = (
+        '_lock',          # concurrency control
+        '_state',         # currently active state
+        {% if sm.pool_size != 0 -%}
+        '_pool',          # MsgRecord deque to hold temporary records
+        {%- endif %}
+        'witness',        # MsgRecord list of observed events
+        'on_enter_scope', # callback upon entering the scope
+        'on_exit_scope',  # callback upon exiting the scope
+        'on_violation',   # callback upon verdict of False
+        'on_success',     # callback upon verdict of True
+        'time_launch',    # when was the monitor launched
+        'time_shutdown',  # when was the monitor shutdown
+        'time_state',     # when did the last state transition occur
+    )
+
+    PROP_ID = '{{ sm.property_id }}'
+    PROP_TITLE = '''{{ sm.property_title|d('HPL Property') }}'''
+    PROP_DESC = '''{{ sm.property_desc|d('') }}'''
+    HPL_PROPERTY = r'''{{ sm.property_text }}'''
+
+    def __init__(self):
+        self._lock = Lock()
+        self._reset()
+        self.on_enter_scope = self._noop
+        self.on_exit_scope = self._noop
+        self.on_violation = self._noop
+        self.on_success = self._noop
+        self._state = {{ STATE_OFF }}
+
+    @property
+    def verdict(self):
+        if self._state == {{ STATE_TRUE }}:
+            return True
+        if self._state == {{ STATE_FALSE }}:
+            return False
+        return None
+
+    def on_launch(self, stamp):
+        with self._lock:
+            if self._state != {{ STATE_OFF }}:
+                raise RuntimeError('monitor is already turned on')
+            self._reset()
+            self.time_launch = stamp
+            {{ change_to_state(sm.initial_state)|indent(12) }}
+
+    def on_shutdown(self, stamp):
+        with self._lock:
+            if self._state == {{ STATE_OFF }}:
+                raise RuntimeError('monitor is already turned off')
+            self.time_shutdown = stamp
+            {{ change_to_state(STATE_OFF)|indent(12) }}
+
+{{ caller(CALLBACK_TIMER)|indent(4, first=true) }}
+
+    {# -#}
+{% for topic, states in sm.on_msg.items() %}
+
+    def on_msg_{{ topic|replace('/', '_') }}(self, msg, stamp):
+        with self._lock:
+            {% for state, events in states.items() %}{# -#}
+            if self._state == {{ state }}:
+                {% for event in events %}{# -#}
+{{ caller(CALLBACK_MSG, event, topic)|indent(16, first=true) }}
+                {% endfor %}
+            {% endfor %}
+        return False
+{% endfor %}
+
+    def _reset(self):
+        self.witness = []
+        {% if sm.pool_size < 0 -%}
+        self._pool = deque()
+        {%- elif sm.pool_size > 0 -%}
+        self._pool = deque((), {{ sm.pool_size }})
+        {%- endif %}
+        self.time_launch = -1
+        self.time_shutdown = -1
+        self.time_state = -1
+
+    def _noop(self, *args):
+        pass
+{%- endmacro %}
+
+{# assume: local('stamp') #}
+{# 's': int #}
+{% macro change_to_state(s, returns=true) -%}
+self._state = {{ s }}
+self.time_state = stamp
+{% if state == STATE_TRUE -%}
+self.on_success(self.witness)
+{%- elif state == STATE_FALSE -%}
+self.on_violation(self.witness)
+{%- endif %}
+{% if returns -%}
+return True
+{%- endif %}
+{%- endmacro %}
+
+{# assume: call #}
+{# 'phi': HplPredicate #}
+{# 's': int #}
+{% macro change_to_state_if(phi, s, returns=true) -%}
+{% if phi.is_vacuous -%}
+    {% if phi.is_true -%}
+{{ caller() }}
+{{ change_to_state(s, returns=returns) }}
+    {%- else -%}
+pass # predicate is always False
+    {%- endif %}
+{%- else -%}
+if {{ P.inline_predicate(phi, 'msg') }}:
+{{ caller()|indent(4, first=true) }}
+{{ change_to_state(s, returns=returns) }}
+{%- endif %}
+{%- endmacro %}
