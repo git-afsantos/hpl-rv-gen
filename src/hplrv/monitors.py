@@ -80,7 +80,7 @@ class PatternBasedBuilder(object):
 class AbsenceBuilder(PatternBasedBuilder):
     #initial_state: int
     #timeout: float
-    #collapse_safe: bool
+    #reentrant_scope: bool
     #pool_size: -1|0|int
     #on_msg:
     #    <topic>:
@@ -90,7 +90,7 @@ class AbsenceBuilder(PatternBasedBuilder):
     def __init__(self, hpl_property):
         super(AbsenceBuilder, self).__init__(hpl_property)
         self._activator = None
-        self._reentrant = False
+        self.reentrant_scope = False
         self.timeout = hpl_property.pattern.max_time
         if self.timeout == INF:
             self.timeout = -1
@@ -98,19 +98,15 @@ class AbsenceBuilder(PatternBasedBuilder):
         self.on_msg = defaultdict(_default_dict_of_lists)
         if hpl_property.scope.is_global:
             self.initial_state = STATE_ACTIVE
-            self.collapse_safe = True
         elif hpl_property.scope.is_after:
             self.initial_state = STATE_INACTIVE
-            self.collapse_safe = True
             self.add_activator(hpl_property.scope.activator)
         elif hpl_property.scope.is_until:
             self.initial_state = STATE_ACTIVE
-            self.collapse_safe = True
             self.add_terminator(hpl_property.scope.terminator)
         elif hpl_property.scope.is_after_until:
             self.initial_state = STATE_INACTIVE
-            self.collapse_safe = False
-            self._reentrant = True
+            self.reentrant_scope = True
             self.add_activator(hpl_property.scope.activator)
             self.add_terminator(hpl_property.scope.terminator)
         else:
@@ -119,7 +115,8 @@ class AbsenceBuilder(PatternBasedBuilder):
 
     @property
     def has_safe_state(self):
-        return self.timeout >= 0 and self.timeout < INF
+        return (self.timeout >= 0 and self.timeout < INF
+                and self.reentrant_scope)
 
     def add_activator(self, event):
         # must be called before all others
@@ -135,7 +132,7 @@ class AbsenceBuilder(PatternBasedBuilder):
 
     def add_terminator(self, event):
         # must be called before pattern events
-        v = None if self._reentrant else True
+        v = None if self.reentrant_scope else True
         for e in event.simple_events():
             alias = None
             if self._activator and e.contains_reference(self._activator):

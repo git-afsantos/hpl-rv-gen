@@ -100,6 +100,8 @@ EXAMPLES = [
     'until /q {phi}: no /b {data > 0} within 100 ms',
 
     'after /p as P until /q {phi and (not @P.psi)}: no /b {forall i in array: array[@i] > 0}',
+
+    'after /p as P until /q {phi and (not @P.psi)}: no /b {exists i in [1 to 4]: array[@i] > 0} within 1 s',
 ]
 
 def test_me():

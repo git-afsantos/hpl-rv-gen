@@ -71,10 +71,11 @@ class {{ sm.class_name }}(object):
 
     @property
     def verdict(self):
-        if self._state == {{ STATE_TRUE }}:
-            return True
-        if self._state == {{ STATE_FALSE }}:
-            return False
+        with self._lock:
+            if self._state == {{ STATE_TRUE }}:
+                return True
+            if self._state == {{ STATE_FALSE }}:
+                return False
         return None
 
     def on_launch(self, stamp):
@@ -83,14 +84,16 @@ class {{ sm.class_name }}(object):
                 raise RuntimeError('monitor is already turned on')
             self._reset()
             self.time_launch = stamp
-            {{ change_to_state(sm.initial_state)|indent(12) }}
+            {{ change_to_state(sm.initial_state, returns=false)|indent(12) }}{#- #}
+        return True
 
     def on_shutdown(self, stamp):
         with self._lock:
             if self._state == {{ STATE_OFF }}:
                 raise RuntimeError('monitor is already turned off')
             self.time_shutdown = stamp
-            {{ change_to_state(STATE_OFF)|indent(12) }}
+            {{ change_to_state(STATE_OFF, returns=false)|indent(12) }}{#- #}
+        return True
 
 {{ caller(CALLBACK_TIMER)|indent(4, first=true) }}
     {# -#}
@@ -124,33 +127,38 @@ class {{ sm.class_name }}(object):
 
 {# assume: local('stamp') #}
 {# 's': int #}
-{% macro change_to_state(s, returns=true) -%}
+{% macro change_to_state(s, returns=true, enters_scope=false, exits_scope=false) %}
 self._state = {{ s }}
 self.time_state = stamp
+{% if enters_scope %}
+self.on_enter_scope(stamp)
+{% elif exits_scope %}
+self.on_exit_scope(stamp)
+{% endif %}
 {% if s == STATE_TRUE %}
-self.on_success(self.witness)
+self.on_success(stamp, self.witness)
 {% elif s == STATE_FALSE %}
-self.on_violation(self.witness)
+self.on_violation(stamp, self.witness)
 {% endif %}
 {% if returns %}
 return True
 {%- endif %}
-{%- endmacro %}
+{% endmacro %}
 
 {# assume: call #}
 {# 'phi': HplPredicate #}
 {# 's': int #}
-{% macro change_to_state_if(phi, s, returns=true) -%}
+{% macro change_to_state_if(phi, s, returns=true, enters_scope=false, exits_scope=false) -%}
 {% if phi.is_vacuous -%}
     {% if phi.is_true -%}
 {{ caller() }}
-{{ change_to_state(s, returns=returns) }}
+{{ change_to_state(s, returns=returns, enters_scope=enters_scope, exits_scope=exits_scope) }}
     {%- else -%}
 pass # predicate is always False
     {%- endif %}
 {%- else -%}
 if {{ P.inline_predicate(phi, 'msg') }}:
 {{ caller()|indent(4, first=true) }}
-{{ change_to_state(s, returns=returns)|indent(4, first=true) }}
+{{ change_to_state(s, returns=returns, enters_scope=enters_scope, exits_scope=exits_scope)|indent(4, first=true) }}
 {%- endif %}
 {%- endmacro %}

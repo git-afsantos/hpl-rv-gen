@@ -12,14 +12,13 @@ def on_timer(self, stamp):
     {% if sm.timeout > 0.0 %}
     with self._lock:
         if self._state == {{ G.STATE_ACTIVE }} and (stamp - self.time_state) >= {{ sm.timeout }}:
-            {% if sm.collapse_safe %}
-            {{ G.change_to_state(G.STATE_TRUE)|indent(12) }}
-            {% else %}
+            {% if sm.reentrant_scope %}
             {{ G.change_to_state(G.STATE_SAFE)|indent(12) }}
+            {% else %}
+            {{ G.change_to_state(G.STATE_TRUE)|indent(12) }}
             {% endif %}
-    {% else %}
-    pass
     {%- endif %}
+    return True
 {%- endmacro %}
 
 
@@ -28,35 +27,35 @@ def on_timer(self, stamp):
 {##############################################################################}
 
 {% macro _on_msg(event, topic) -%}
-{% if event.event_type == G.EVENT_ACTIVATOR -%}
+{% if event.event_type == G.EVENT_ACTIVATOR %}
 {# after or after-until -#}
-    {% call G.change_to_state_if(event.predicate, G.STATE_ACTIVE) -%}
+    {% call G.change_to_state_if(event.predicate, G.STATE_ACTIVE, enters_scope=true) %}
 self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
     {%- endcall %}
-{%- elif event.event_type == G.EVENT_TERMINATOR -%}
+{% elif event.event_type == G.EVENT_TERMINATOR %}
 {# until or after-until -#}
-    {% if event.activator -%}
+    {% if event.activator %}
 assert len(self.witness) >= 1, 'missing activator'
-msg_{{ event.activator }} = self.witness[0].msg
-    {%- endif %}
-    {% if event.verdict -%}
-        {% call G.change_to_state_if(event.predicate, G.STATE_TRUE) -%}
+v_{{ event.activator }} = self.witness[0].msg
+    {% endif %}
+    {% if event.verdict %}
+        {% call G.change_to_state_if(event.predicate, G.STATE_TRUE, exits_scope=true) %}
 self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
         {%- endcall %}
-    {%- else -%}
-        {% call G.change_to_state_if(event.predicate, G.STATE_INACTIVE) -%}
+    {% else %}
+        {% call G.change_to_state_if(event.predicate, G.STATE_INACTIVE, exits_scope=true) %}
 self.witness = []
         {%- endcall %}
-    {%- endif -%}
-{%- elif event.event_type == G.EVENT_BEHAVIOUR -%}
-    {% if event.activator -%}
+    {% endif %}
+{% elif event.event_type == G.EVENT_BEHAVIOUR %}
+    {% if event.activator %}
 assert len(self.witness) >= 1, 'missing activator'
-msg_{{ event.activator }} = self.witness[0].msg
-    {%- endif %}
-    {% call G.change_to_state_if(event.predicate, G.STATE_FALSE) -%}
+v_{{ event.activator }} = self.witness[0].msg
+    {% endif %}
+    {% call G.change_to_state_if(event.predicate, G.STATE_FALSE) %}
 self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
     {%- endcall %}
-{%- else -%}
+{% else %}
 assert False, 'unexpected event type: {{ event.event_type }}'
 {%- endif %}
 {%- endmacro %}
