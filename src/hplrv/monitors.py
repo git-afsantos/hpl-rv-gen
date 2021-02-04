@@ -61,10 +61,23 @@ def _default_dict_of_lists():
     return defaultdict(list)
 
 ###############################################################################
+# State Machine Builder
+###############################################################################
+
+class PatternBasedBuilder(object):
+    def __init__(self, hpl_property):
+        self.property_id = hpl_property.metadata.get('id')
+        self.property_title = hpl_property.metadata.get('title')
+        self.property_desc = hpl_property.metadata.get('description')
+        self.property_text = str(hpl_property)
+        self.class_name = 'PropertyMonitor'
+
+
+###############################################################################
 # Absence State Machine
 ###############################################################################
 
-class AbsenceBuilder(object):
+class AbsenceBuilder(PatternBasedBuilder):
     #initial_state: int
     #timeout: float
     #collapse_safe: bool
@@ -75,6 +88,7 @@ class AbsenceBuilder(object):
     #            - <event>
 
     def __init__(self, hpl_property):
+        super(AbsenceBuilder, self).__init__(hpl_property)
         self._activator = None
         self._reentrant = False
         self.timeout = hpl_property.pattern.max_time

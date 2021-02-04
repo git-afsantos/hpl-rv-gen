@@ -9,15 +9,15 @@
 
 {% macro _on_timer(sm) -%}
 def on_timer(self, stamp):
-    {% if sm.timeout > 0.0 -%}
+    {% if sm.timeout > 0.0 %}
     with self._lock:
         if self._state == {{ G.STATE_ACTIVE }} and (stamp - self.time_state) >= {{ sm.timeout }}:
-            {% if sm.collapse_safe -%}
+            {% if sm.collapse_safe %}
             {{ G.change_to_state(G.STATE_TRUE)|indent(12) }}
-            {%- else -%}
+            {% else %}
             {{ G.change_to_state(G.STATE_SAFE)|indent(12) }}
-            {%- endif %}
-    {%- else -%}
+            {% endif %}
+    {% else %}
     pass
     {%- endif %}
 {%- endmacro %}

@@ -93,13 +93,12 @@ class {{ sm.class_name }}(object):
             {{ change_to_state(STATE_OFF)|indent(12) }}
 
 {{ caller(CALLBACK_TIMER)|indent(4, first=true) }}
-
     {# -#}
 {% for topic, states in sm.on_msg.items() %}
 
     def on_msg_{{ topic|replace('/', '_') }}(self, msg, stamp):
         with self._lock:
-            {% for state, events in states.items() %}{# -#}
+            {% for state, events in states.items() %}
             if self._state == {{ state }}:
                 {% for event in events %}{# -#}
 {{ caller(CALLBACK_MSG, event, topic)|indent(16, first=true) }}
@@ -128,12 +127,12 @@ class {{ sm.class_name }}(object):
 {% macro change_to_state(s, returns=true) -%}
 self._state = {{ s }}
 self.time_state = stamp
-{% if state == STATE_TRUE -%}
+{% if s == STATE_TRUE %}
 self.on_success(self.witness)
-{%- elif state == STATE_FALSE -%}
+{% elif s == STATE_FALSE %}
 self.on_violation(self.witness)
-{%- endif %}
-{% if returns -%}
+{% endif %}
+{% if returns %}
 return True
 {%- endif %}
 {%- endmacro %}
@@ -152,6 +151,6 @@ pass # predicate is always False
 {%- else -%}
 if {{ P.inline_predicate(phi, 'msg') }}:
 {{ caller()|indent(4, first=true) }}
-{{ change_to_state(s, returns=returns) }}
+{{ change_to_state(s, returns=returns)|indent(4, first=true) }}
 {%- endif %}
 {%- endmacro %}
