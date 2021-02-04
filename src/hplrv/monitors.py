@@ -39,13 +39,14 @@ def new_terminator(phi, activator, verdict):
 
 
 BehaviourEvent = namedtuple('BehaviourEvent',
-    ('event_type', 'predicate', 'activator', 'trigger'))
+    ('event_type', 'predicate', 'activator', 'trigger', 'extra_param'))
 
-def new_behaviour(phi, activator, trigger):
+def new_behaviour(phi, activator, trigger, extra=None):
     # predicate: HplPredicate
     # activator: str|None
     # trigger: str|None
-    return BehaviourEvent(EVENT_BEHAVIOUR, phi, activator, trigger)
+    # extra_param: any
+    return BehaviourEvent(EVENT_BEHAVIOUR, phi, activator, trigger, extra)
 
 
 TriggerEvent = namedtuple('TriggerEvent',
@@ -65,19 +66,6 @@ def _default_dict_of_lists():
 ###############################################################################
 
 class PatternBasedBuilder(object):
-    def __init__(self, hpl_property):
-        self.property_id = hpl_property.metadata.get('id')
-        self.property_title = hpl_property.metadata.get('title')
-        self.property_desc = hpl_property.metadata.get('description')
-        self.property_text = str(hpl_property)
-        self.class_name = 'PropertyMonitor'
-
-
-###############################################################################
-# Absence State Machine
-###############################################################################
-
-class AbsenceBuilder(PatternBasedBuilder):
     #initial_state: int
     #timeout: float
     #reentrant_scope: bool
@@ -87,22 +75,27 @@ class AbsenceBuilder(PatternBasedBuilder):
     #        <state>:
     #            - <event>
 
-    def __init__(self, hpl_property):
-        super(AbsenceBuilder, self).__init__(hpl_property)
+    def __init__(self, hpl_property, s0):
+        self.property_id = hpl_property.metadata.get('id')
+        self.property_title = hpl_property.metadata.get('title')
+        self.property_desc = hpl_property.metadata.get('description')
+        self.property_text = str(hpl_property)
+        self.class_name = 'PropertyMonitor'
         self._activator = None
+        self._trigger = None
         self.reentrant_scope = False
         self.timeout = hpl_property.pattern.max_time
         if self.timeout == INF:
             self.timeout = -1
-        self.pool_size = 0
+        self.pool_size = self.calc_pool_size(hpl_property)
         self.on_msg = defaultdict(_default_dict_of_lists)
         if hpl_property.scope.is_global:
-            self.initial_state = STATE_ACTIVE
+            self.initial_state = s0
         elif hpl_property.scope.is_after:
             self.initial_state = STATE_INACTIVE
             self.add_activator(hpl_property.scope.activator)
         elif hpl_property.scope.is_until:
-            self.initial_state = STATE_ACTIVE
+            self.initial_state = s0
             self.add_terminator(hpl_property.scope.terminator)
         elif hpl_property.scope.is_after_until:
             self.initial_state = STATE_INACTIVE
@@ -111,12 +104,41 @@ class AbsenceBuilder(PatternBasedBuilder):
             self.add_terminator(hpl_property.scope.terminator)
         else:
             raise ValueError('unknown scope: ' + str(hpl_property.scope))
+        if hpl_property.pattern.trigger is not None:
+            self.add_trigger(hpl_property.pattern.trigger)
         self.add_behaviour(hpl_property.pattern.behaviour)
+
+    def add_activator(self, event):
+        raise NotImplementedError()
+
+    def add_terminator(self, event):
+        raise NotImplementedError()
+
+    def add_trigger(self, event):
+        raise NotImplementedError()
+
+    def add_behaviour(self, event):
+        raise NotImplementedError()
+
+    def calc_pool_size(self, hpl_property):
+        raise NotImplementedError()
+
+
+###############################################################################
+# Absence State Machine
+###############################################################################
+
+class AbsenceBuilder(PatternBasedBuilder):
+    def __init__(self, hpl_property):
+        super(AbsenceBuilder, self).__init__(hpl_property, STATE_ACTIVE)
 
     @property
     def has_safe_state(self):
         return (self.timeout >= 0 and self.timeout < INF
                 and self.reentrant_scope)
+
+    def calc_pool_size(self, hpl_property):
+        return 0
 
     def add_activator(self, event):
         # must be called before all others
@@ -152,14 +174,71 @@ class AbsenceBuilder(PatternBasedBuilder):
             self.on_msg[e.topic][STATE_ACTIVE].append(datum)
 
 
-class ExistenceBuilder(object):
+###############################################################################
+# Existence State Machine
+###############################################################################
+
+class ExistenceBuilder(PatternBasedBuilder):
+    def __init__(self, hpl_property):
+        super(ExistenceBuilder, self).__init__(hpl_property, STATE_ACTIVE)
+
+    def calc_pool_size(self, hpl_property):
+        return 0
+
+    def add_activator(self, event):
+        # must be called before all others
+        # assuming only disjunctions or simple events
+        if event.is_simple_event:
+            self._activator = event.alias
+            datum = new_activator(event.predicate)
+            self.on_msg[event.topic][STATE_INACTIVE].append(datum)
+        else:
+            for e in event.simple_events():
+                datum = new_activator(e.predicate)
+                self.on_msg[e.topic][STATE_INACTIVE].append(datum)
+
+    def add_terminator(self, event):
+        # must be called before pattern events
+        self.has_safe_state = True
+        for e in event.simple_events():
+            alias = None
+            if self._activator and e.contains_reference(self._activator):
+                alias = self._activator
+            states = self.on_msg[e.topic]
+            datum = new_terminator(e.predicate, alias, False)
+            states[STATE_ACTIVE].append(datum)
+            datum = new_terminator(e.predicate, alias, None)
+            states[STATE_SAFE].append(datum)
+
+    def add_behaviour(self, event):
+        for e in event.simple_events():
+            alias = None
+            if self._activator and e.contains_reference(self._activator):
+                alias = self._activator
+            datum = new_behaviour(e.predicate, alias, None,
+                                  extra=self.has_safe_state)
+            self.on_msg[e.topic][STATE_ACTIVE].append(datum)
+
+
+###############################################################################
+# Requirement State Machine
+###############################################################################
+
+class RequirementBuilder(PatternBasedBuilder):
     pass
 
-class RequirementBuilder(object):
+
+###############################################################################
+# Response State Machine
+###############################################################################
+
+class ResponseBuilder(PatternBasedBuilder):
     pass
 
-class ResponseBuilder(object):
-    pass
 
-class PreventionBuilder(object):
+###############################################################################
+# Prevention State Machine
+###############################################################################
+
+class PreventionBuilder(PatternBasedBuilder):
     pass

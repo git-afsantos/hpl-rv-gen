@@ -83,7 +83,7 @@ def main(args):
 
 
 
-EXAMPLES = [
+ABSENCE_EXAMPLES = [
     '''
     # id: p1
     # title: "My First Property"
@@ -102,6 +102,14 @@ EXAMPLES = [
     'after /p as P until /q {phi and (not @P.psi)}: no /b {forall i in array: array[@i] > 0}',
 
     'after /p as P until /q {phi and (not @P.psi)}: no /b {exists i in [1 to 4]: array[@i] > 0} within 1 s',
+
+    'globally: no (/b1 {data > 0} or /b2 {data < 0})  within 100 ms',
+
+    'globally: no (/b {data > 0} or /b {data < 0})  within 100 ms',
+
+    'after /b: no /b {3 * data**2 > 0}',
+
+    'after (/p or /q or /b or /b): no /b {data in {1,2,3}}',
 ]
 
 def test_me():
@@ -109,7 +117,7 @@ def test_me():
     p = property_parser()
     r = TemplateRenderer()
     outputs = []
-    for text in EXAMPLES:
+    for text in ABSENCE_EXAMPLES:
         hpl_property = p.parse(text)
         code = r.render_monitor(hpl_property)
         outputs.append(code)
