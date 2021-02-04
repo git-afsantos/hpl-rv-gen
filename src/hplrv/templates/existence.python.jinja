@@ -13,8 +13,8 @@ def on_timer(self, stamp):
     with self._lock:
         if self._state == {{ G.STATE_ACTIVE }} and (stamp - self.time_state) >= {{ sm.timeout }}:
             {{ G.change_to_state(G.STATE_FALSE)|indent(12) }}
-    {%- endif %}
-    return True
+    {% endif %}
+    return False
 {%- endmacro %}
 
 
@@ -26,12 +26,12 @@ def on_timer(self, stamp):
 {% if event.event_type == G.EVENT_ACTIVATOR %}
 {# after or after-until -#}
 {{ _activator(event, topic) }}
-{% elif event.event_type == G.EVENT_TERMINATOR %}
+{%- elif event.event_type == G.EVENT_TERMINATOR %}
 {# until or after-until -#}
 {{ _terminator(event, topic) }}
-{% elif event.event_type == G.EVENT_BEHAVIOUR %}
+{%- elif event.event_type == G.EVENT_BEHAVIOUR %}
 {{ _behaviour(event, topic) }}
-{% else %}
+{%- else %}
 assert False, 'unexpected event type: {{ event.event_type }}'
 {%- endif %}
 {%- endmacro %}

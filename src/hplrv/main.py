@@ -112,6 +112,8 @@ ABSENCE_EXAMPLES = [
     'after (/p or /q or /b or /b): no /b {data in {1,2,3}}',
 ]
 
+EXISTENCE_EXAMPLES = [e.replace(' no ', ' some ') for e in ABSENCE_EXAMPLES]
+
 def test_me():
     from hpl.parser import property_parser
     p = property_parser()

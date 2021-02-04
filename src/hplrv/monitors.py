@@ -207,8 +207,9 @@ class ExistenceBuilder(PatternBasedBuilder):
             states = self.on_msg[e.topic]
             datum = new_terminator(e.predicate, alias, False)
             states[STATE_ACTIVE].append(datum)
-            datum = new_terminator(e.predicate, alias, None)
-            states[STATE_SAFE].append(datum)
+            if self.reentrant_scope:
+                datum = new_terminator(e.predicate, alias, None)
+                states[STATE_SAFE].append(datum)
 
     def add_behaviour(self, event):
         for e in event.simple_events():
@@ -216,7 +217,7 @@ class ExistenceBuilder(PatternBasedBuilder):
             if self._activator and e.contains_reference(self._activator):
                 alias = self._activator
             datum = new_behaviour(e.predicate, alias, None,
-                                  extra=self.has_safe_state)
+                                  extra=self.reentrant_scope)
             self.on_msg[e.topic][STATE_ACTIVE].append(datum)
 
 
