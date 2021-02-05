@@ -123,9 +123,9 @@ PRECEDENCE_EXAMPLES = [
 
     'globally: /b {data > 0} requires /a {data < 0} within 100 ms',
 
-    'globally: /b as B requires /a {data < @B.data}',
+    #'globally: /b as B requires /a {data < @B.data}',
 
-    'globally: /b as B {data > 0} requires /a {data < @B.data} within 100 ms',
+    #'globally: /b as B {data > 0} requires /a {data < @B.data} within 100 ms',
 
     'globally: (/b1 {data > 0} or /b2 {data < 0}) requires /a',
 
