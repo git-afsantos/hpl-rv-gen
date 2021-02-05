@@ -16,7 +16,7 @@ if self._state == {{ G.STATE_SAFE }}:
     if (stamp - rec.timestamp) >= {{ sm.timeout }}:
         self._pool.pop()
 {{ G.change_to_state(G.STATE_ACTIVE, returns=false)|indent(8, first=true) }}
-{% endmacro %}
+{%- endmacro %}
 
 
 {##############################################################################}
