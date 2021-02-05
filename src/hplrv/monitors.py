@@ -212,10 +212,16 @@ class RequirementBuilder(PatternBasedBuilder):
     def __init__(self, hpl_property):
         self.has_trigger_refs = False
         b = hpl_property.pattern.behaviour
-        for alias in hpl_property.pattern.trigger.aliases():
+        a = hpl_property.pattern.trigger
+        for alias in a.aliases():
             if b.contains_reference(alias):
                 self.has_trigger_refs = True
                 break
+        else:
+            for alias in b.aliases():
+                if a.contains_reference(alias):
+                    self.has_trigger_refs = True
+                    break
         super(RequirementBuilder, self).__init__(hpl_property, STATE_ACTIVE)
 
     @property
