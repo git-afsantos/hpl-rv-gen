@@ -55,7 +55,7 @@ class PropertyMonitor(object):
         return True
 
     def on_timer(self, stamp):
-        return False
+        return True
 
     def on_msg__ns_topic(self, msg, stamp):
         with self._lock:
@@ -139,11 +139,14 @@ class PropertyMonitor(object):
                 self._state = -2
                 self.time_state = stamp
                 self.on_violation(stamp, self.witness)
-                return True
-        return False
+        return True
 
     def on_msg__ns_topic(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 0.1:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 2:
                 if (msg.data > 0):
                     self.witness.append(MsgRecord('/ns/topic', stamp, msg))
@@ -224,11 +227,14 @@ class PropertyMonitor(object):
                 self._state = -2
                 self.time_state = stamp
                 self.on_violation(stamp, self.witness)
-                return True
-        return False
+        return True
 
     def on_msg__b(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 0.1:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 2:
                 if (msg.data > 0):
                     self.witness.append(MsgRecord('/b', stamp, msg))
@@ -240,6 +246,10 @@ class PropertyMonitor(object):
 
     def on_msg__p(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 0.1:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 1:
                 self.witness.append(MsgRecord('/p', stamp, msg))
                 self._state = 2
@@ -314,7 +324,7 @@ class PropertyMonitor(object):
         return True
 
     def on_timer(self, stamp):
-        return False
+        return True
 
     def on_msg__b(self, msg, stamp):
         with self._lock:
@@ -410,11 +420,14 @@ class PropertyMonitor(object):
                 self._state = -2
                 self.time_state = stamp
                 self.on_violation(stamp, self.witness)
-                return True
-        return False
+        return True
 
     def on_msg__b(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 0.1:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 2:
                 if (msg.data > 0):
                     self.witness.append(MsgRecord('/b', stamp, msg))
@@ -426,6 +439,10 @@ class PropertyMonitor(object):
 
     def on_msg__q(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 0.1:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 2:
                 if msg.phi:
                     self.witness.append(MsgRecord('/q', stamp, msg))
@@ -502,7 +519,7 @@ class PropertyMonitor(object):
         return True
 
     def on_timer(self, stamp):
-        return False
+        return True
 
     def on_msg__b(self, msg, stamp):
         with self._lock:
@@ -618,11 +635,14 @@ class PropertyMonitor(object):
                 self._state = -2
                 self.time_state = stamp
                 self.on_violation(stamp, self.witness)
-                return True
-        return False
+        return True
 
     def on_msg__b(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 1.0:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 2:
                 if any((msg.array[v_i] > 0) for v_i in range(int(1), int(4)+1)):
                     self.witness.append(MsgRecord('/b', stamp, msg))
@@ -633,6 +653,10 @@ class PropertyMonitor(object):
 
     def on_msg__q(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 1.0:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 2:
                 assert len(self.witness) >= 1, 'missing activator'
                 v_P = self.witness[0].msg
@@ -656,6 +680,10 @@ class PropertyMonitor(object):
 
     def on_msg__p(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 1.0:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 1:
                 self.witness.append(MsgRecord('/p', stamp, msg))
                 self._state = 2
@@ -735,11 +763,14 @@ class PropertyMonitor(object):
                 self._state = -2
                 self.time_state = stamp
                 self.on_violation(stamp, self.witness)
-                return True
-        return False
+        return True
 
     def on_msg__b2(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 0.1:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 2:
                 if (msg.data < 0):
                     self.witness.append(MsgRecord('/b2', stamp, msg))
@@ -751,6 +782,10 @@ class PropertyMonitor(object):
 
     def on_msg__b1(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 0.1:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 2:
                 if (msg.data > 0):
                     self.witness.append(MsgRecord('/b1', stamp, msg))
@@ -831,11 +866,14 @@ class PropertyMonitor(object):
                 self._state = -2
                 self.time_state = stamp
                 self.on_violation(stamp, self.witness)
-                return True
-        return False
+        return True
 
     def on_msg__b(self, msg, stamp):
         with self._lock:
+            if self._state == 2 and (stamp - self.time_state) >= 0.1:
+                self._state = -2
+                self.time_state = stamp
+                self.on_violation(stamp, self.witness)
             if self._state == 2:
                 if (msg.data > 0):
                     self.witness.append(MsgRecord('/b', stamp, msg))
@@ -917,7 +955,7 @@ class PropertyMonitor(object):
         return True
 
     def on_timer(self, stamp):
-        return False
+        return True
 
     def on_msg__b(self, msg, stamp):
         with self._lock:
@@ -1002,7 +1040,7 @@ class PropertyMonitor(object):
         return True
 
     def on_timer(self, stamp):
-        return False
+        return True
 
     def on_msg__b(self, msg, stamp):
         with self._lock:
