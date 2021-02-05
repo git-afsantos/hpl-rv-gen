@@ -114,12 +114,55 @@ ABSENCE_EXAMPLES = [
 
 EXISTENCE_EXAMPLES = [e.replace(' no ', ' some ') for e in ABSENCE_EXAMPLES]
 
+PRECEDENCE_EXAMPLES = [
+    'globally: /b requires /a',
+
+    'globally: /b requires /a within 100 ms',
+
+    'globally: /b {data > 0} requires /a {data < 0}',
+
+    'globally: /b {data > 0} requires /a {data < 0} within 100 ms',
+
+    'globally: /b as B requires /a {data < @B.data}',
+
+    'globally: /b as B {data > 0} requires /a {data < @B.data} within 100 ms',
+
+    'globally: (/b1 {data > 0} or /b2 {data < 0}) requires /a',
+
+    'globally: (/b1 {data > 0} or /b2 {data < 0}) requires /a within 100 ms',
+
+    'globally: /b requires (/a1 {data > 0} or /a2 {data < 0})',
+
+    'globally: /b requires (/a1 {data > 0} or /a2 {data < 0}) within 100 ms',
+
+    'globally: /b requires /b within 100 ms',
+
+    'globally: /b requires /b {data > 0} within 100 ms',
+
+    'globally: /b {data > 0} requires /b within 100 ms',
+
+    #'after /p: /b requires /a within 100 ms',
+
+    #'after /p as P: no /b {data > @P.data}',
+
+    #'until /q {phi}: no /b {data > 0} within 100 ms',
+
+    #'after /p as P until /q {phi and (not @P.psi)}: no /b {forall i in array: array[@i] > 0}',
+
+    #'after /p as P until /q {phi and (not @P.psi)}: no /b {exists i in [1 to 4]: array[@i] > 0} within 1 s',
+
+    #'after /b: no /b {3 * data**2 > 0}',
+
+    #'after (/p or /q or /b or /b): no /b {data in {1,2,3}}',
+]
+
+
 def test_me():
     from hpl.parser import property_parser
     p = property_parser()
     r = TemplateRenderer()
     outputs = []
-    for text in ABSENCE_EXAMPLES:
+    for text in PRECEDENCE_EXAMPLES:
         hpl_property = p.parse(text)
         code = r.render_monitor(hpl_property)
         outputs.append(code)
