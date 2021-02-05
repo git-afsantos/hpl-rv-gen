@@ -42,9 +42,9 @@ class {{ sm.class_name }}(object):
     __slots__ = (
         '_lock',          # concurrency control
         '_state',         # currently active state
-        {% if sm.pool_size != 0 -%}
+        {% if sm.pool_size != 0 %}
         '_pool',          # MsgRecord deque to hold temporary records
-        {%- endif %}
+        {% endif %}
         'witness',        # MsgRecord list of observed events
         'on_enter_scope', # callback upon entering the scope
         'on_exit_scope',  # callback upon exiting the scope
@@ -95,16 +95,24 @@ class {{ sm.class_name }}(object):
             {{ change_to_state(STATE_OFF, returns=false)|indent(12) }}{#- #}
         return True
 
-{{ caller(CALLBACK_TIMER)|indent(4, first=true) }}
+    def on_timer(self, stamp):
+        {% if sm.timeout > 0.0 %}
+        with self._lock:
+{{ caller(CALLBACK_TIMER)|indent(12, first=true) }}
+        {%- endif %}
+        return True
     {# -#}
 {% for topic, states in sm.on_msg.items() %}
 
     def on_msg_{{ topic|replace('/', '_') }}(self, msg, stamp):
         with self._lock:
+            {% if sm.timeout > 0.0 %}
+{{ caller(CALLBACK_TIMER)|indent(12, first=true) }}
+            {%- endif %}
             {% for state, events in states.items() %}
             if self._state == {{ state }}:
                 {% for event in events %}{# -#}
-{{ caller(CALLBACK_MSG, event, topic)|indent(16, first=true) }}
+{{ caller(CALLBACK_MSG, event, topic, state)|indent(16, first=true) }}
                 {% endfor %}
             {% endfor %}
         return False
@@ -112,11 +120,11 @@ class {{ sm.class_name }}(object):
 
     def _reset(self):
         self.witness = []
-        {% if sm.pool_size < 0 -%}
+        {% if sm.pool_size < 0 %}
         self._pool = deque()
-        {%- elif sm.pool_size > 0 -%}
+        {% elif sm.pool_size > 0 %}
         self._pool = deque((), {{ sm.pool_size }})
-        {%- endif %}
+        {% endif %}
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
@@ -160,5 +168,24 @@ pass # predicate is always False
 if {{ P.inline_predicate(phi, 'msg') }}:
 {{ caller()|indent(4, first=true) }}
 {{ change_to_state(s, returns=returns, enters_scope=enters_scope, exits_scope=exits_scope)|indent(4, first=true) }}
+{%- endif %}
+{%- endmacro %}
+
+{% macro do_if(phi, returns=true) -%}
+{% if phi.is_vacuous -%}
+    {% if phi.is_true -%}
+{{ caller() }}
+        {% if returns %}
+return True
+        {%- endif %}
+    {%- else -%}
+pass # predicate is always False
+    {%- endif %}
+{%- else -%}
+if {{ P.inline_predicate(phi, 'msg') }}:
+{{ caller()|indent(4, first=true) }}
+    {% if returns %}
+return True
+    {%- endif %}
 {%- endif %}
 {%- endmacro %}

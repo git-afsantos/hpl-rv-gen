@@ -8,17 +8,12 @@
 {##############################################################################}
 
 {% macro _on_timer(sm) -%}
-def on_timer(self, stamp):
-    {% if sm.timeout > 0.0 %}
-    with self._lock:
-        if self._state == {{ G.STATE_ACTIVE }} and (stamp - self.time_state) >= {{ sm.timeout }}:
-            {% if sm.reentrant_scope %}
-            {{ G.change_to_state(G.STATE_SAFE)|indent(12) }}
-            {% else %}
-            {{ G.change_to_state(G.STATE_TRUE)|indent(12) }}
-            {% endif %}
+if self._state == {{ G.STATE_ACTIVE }} and (stamp - self.time_state) >= {{ sm.timeout }}:
+    {% if sm.reentrant_scope %}
+{{ G.change_to_state(G.STATE_SAFE, returns=false)|indent(4, first=true) }}
+    {%- else %}
+{{ G.change_to_state(G.STATE_TRUE, returns=false)|indent(4, first=true) }}
     {%- endif %}
-    return False
 {%- endmacro %}
 
 
