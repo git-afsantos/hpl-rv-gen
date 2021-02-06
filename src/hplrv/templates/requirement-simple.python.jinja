@@ -29,9 +29,9 @@ if self._state == {{ G.STATE_SAFE }}:
 {{ _activator(event, topic) }}
 {%- elif event.event_type == G.EVENT_TERMINATOR %}
 {# until or after-until -#}
-{{ _terminator(event, topic) }}
+{{ _terminator(sm, event, topic) }}
 {%- elif event.event_type == G.EVENT_BEHAVIOUR %}
-{{ _behaviour(event, topic) }}
+{{ _behaviour(sm, event, topic) }}
 {%- elif event.event_type == G.EVENT_TRIGGER %}
 {{ _trigger(sm, event, topic, from_state) }}
 {%- else %}
@@ -45,7 +45,7 @@ self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
     {%- endcall %}
 {%- endmacro %}
 
-{% macro _terminator(event, topic) -%}
+{% macro _terminator(sm, event, topic) -%}
     {% if event.activator %}
 assert len(self.witness) >= 1, 'missing activator'
 v_{{ event.activator }} = self.witness[0].msg
@@ -56,15 +56,22 @@ self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
         {%- endcall %}
     {% else %}
         {% call G.change_to_state_if(event.predicate, G.STATE_INACTIVE, exits_scope=true) %}
+            {% if sm.pool_size < 0 %}
+self._pool = deque()
+            {% elif sm.pool_size > 0 %}
+self._pool = deque((), {{ sm.pool_size }})
+            {% endif %}
 self.witness = []
         {%- endcall %}
     {% endif %}
 {%- endmacro %}
 
-{% macro _behaviour(event, topic) -%}
+{% macro _behaviour(sm, event, topic) -%}
     {# no references to EVENT_TRIGGER in this template #}
     {# we must be in STATE_ACTIVE, self._pool must be empty #}
+    {% if sm.pool_size != 0 %}
 assert not self._pool, 'unexpected trigger'
+    {% endif %}
     {% if event.activator %}
 assert len(self.witness) >= 1, 'missing activator'
 v_{{ event.activator }} = self.witness[0].msg
@@ -82,7 +89,7 @@ assert len(self.witness) >= 1, 'missing activator'
 v_{{ event.activator }} = self.witness[0].msg
     {% endif %}
     {% if from_state == G.STATE_ACTIVE %}
-        {% if sm.timeout > 0.0 %}
+        {% if sm.timeout > 0.0 or sm.reentrant_scope %}
             {% call G.change_to_state_if(event.predicate, G.STATE_SAFE) %}
 self._pool.append(MsgRecord('{{ topic }}', stamp, msg))
             {%- endcall %}

@@ -226,7 +226,8 @@ class RequirementBuilder(PatternBasedBuilder):
 
     @property
     def has_safe_state(self):
-        return self.timeout > 0 and not self.has_trigger_refs
+        return ((self.timeout > 0 or self.reentrant_scope)
+                and not self.has_trigger_refs)
 
     def calc_pool_size(self, hpl_property):
         if not self.has_trigger_refs:
