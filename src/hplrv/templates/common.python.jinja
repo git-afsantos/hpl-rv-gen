@@ -185,7 +185,7 @@ pass # predicate is always False
 if {{ P.inline_predicate(phi, 'msg') }}:
 {{ caller()|indent(4, first=true) }}
     {% if returns %}
-return True
+    return True
     {%- endif %}
 {%- endif %}
 {%- endmacro %}
