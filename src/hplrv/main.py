@@ -141,19 +141,57 @@ PRECEDENCE_EXAMPLES = [
 
     'globally: /b {data > 0} requires /b within 100 ms',
 
-    #'after /p: /b requires /a within 100 ms',
+    'after /p: /b requires /a',
 
-    #'after /p as P: no /b {data > @P.data}',
+    'after /p: /b requires /a within 100 ms',
 
-    #'until /q {phi}: no /b {data > 0} within 100 ms',
+    'after /p {phi implies psi}: /b {data > 0} requires /a {data < 0}',
 
-    #'after /p as P until /q {phi and (not @P.psi)}: no /b {forall i in array: array[@i] > 0}',
+    'after /p {phi iff psi}: /b {data > 0} requires /a {data < 0} within 100 ms',
 
-    #'after /p as P until /q {phi and (not @P.psi)}: no /b {exists i in [1 to 4]: array[@i] > 0} within 1 s',
+    'after /p: (/b1 {data > 0} or /b2 {data < 0}) requires /a',
 
-    #'after /b: no /b {3 * data**2 > 0}',
+    'after /p: (/b1 {data > 0} or /b2 {data < 0}) requires /a within 100 ms',
 
-    #'after (/p or /q or /b or /b): no /b {data in {1,2,3}}',
+    'after /p: /b requires (/a1 {data > 0} or /a2 {data < 0})',
+
+    'after /p: /b requires (/a1 {data > 0} or /a2 {data < 0}) within 100 ms',
+
+    'after (/p1 {x in {1,2,3}} or /p2 {y in ![0 to 10]!}): /b requires /a',
+
+    'after (/p1 {x in {1,2,3}} or /p2 {y in ![0 to 10]!}): /b requires /a within 100 ms',
+
+    'after /b: /b requires /a within 100 ms',
+
+    'after /a: /b requires /a within 100 ms',
+
+    'after /b: /b requires /b within 100 ms',
+
+    'until /q {phi}: /b {psi} requires /a {omega}',
+
+    'until /q {phi}: /b {psi} requires /a {omega} within 100 ms',
+
+    'until /q: (/b1 {phi} or /b2 {psi}) requires /a',
+
+    'until (/q1 or /q2): /b requires /a',
+
+    'until /b: /b requires /a',
+
+    'until /a: /b requires /a',
+
+    'after /p {phi} until /q {psi}: /b {beta} requires /a {alpha}',
+
+    'after /p {phi} until /q {psi}: /b {beta} requires /a {alpha} within 100 ms',
+
+    'after /p until /q: (/b1 {beta} or /b2 {beta}) requires /a',
+
+    'after /p until (/q1 or /q2): /b requires /a',
+
+    'after (/p or /q) until /q: /b requires /a',
+
+    'after /b until /q: /b requires /a',
+
+    'after /p until /a: /b requires /a',
 ]
 
 
