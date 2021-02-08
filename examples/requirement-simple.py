@@ -2874,6 +2874,7 @@ class PropertyMonitor(object):
         with self._lock:
             if self._state == 2:
                 if msg.phi:
+                    # there is no record pool to clear
                     self.witness.append(MsgRecord('/q', stamp, msg))
                     self._state = -1
                     self.time_state = stamp
@@ -3000,6 +3001,7 @@ class PropertyMonitor(object):
                     self.time_state = stamp
             if self._state == 2:
                 if msg.phi:
+                    self._pool = deque((), 1)
                     self.witness.append(MsgRecord('/q', stamp, msg))
                     self._state = -1
                     self.time_state = stamp
@@ -3008,6 +3010,7 @@ class PropertyMonitor(object):
                     return True
             if self._state == 3:
                 if msg.phi:
+                    self._pool = deque((), 1)
                     self.witness.append(MsgRecord('/q', stamp, msg))
                     self._state = -1
                     self.time_state = stamp
@@ -3130,6 +3133,7 @@ class PropertyMonitor(object):
     def on_msg__q(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness.append(MsgRecord('/q', stamp, msg))
                 self._state = -1
                 self.time_state = stamp
@@ -3230,6 +3234,7 @@ class PropertyMonitor(object):
     def on_msg__q2(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness.append(MsgRecord('/q2', stamp, msg))
                 self._state = -1
                 self.time_state = stamp
@@ -3241,6 +3246,7 @@ class PropertyMonitor(object):
     def on_msg__q1(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness.append(MsgRecord('/q1', stamp, msg))
                 self._state = -1
                 self.time_state = stamp
@@ -3330,6 +3336,7 @@ class PropertyMonitor(object):
     def on_msg__b(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness.append(MsgRecord('/b', stamp, msg))
                 self._state = -1
                 self.time_state = stamp
@@ -3434,6 +3441,7 @@ class PropertyMonitor(object):
     def on_msg__a(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness.append(MsgRecord('/a', stamp, msg))
                 self._state = -1
                 self.time_state = stamp
@@ -3544,6 +3552,7 @@ class PropertyMonitor(object):
         with self._lock:
             if self._state == 2:
                 if msg.psi:
+                    # there is no record pool to clear
                     self.witness = []
                     self._state = 1
                     self.time_state = stamp
@@ -3551,6 +3560,7 @@ class PropertyMonitor(object):
                     return True
             if self._state == 3:
                 if msg.psi:
+                    # there is no record pool to clear
                     self.witness = []
                     self._state = 1
                     self.time_state = stamp
@@ -3837,12 +3847,14 @@ class PropertyMonitor(object):
     def on_msg__q(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
                 self.on_exit_scope(stamp)
                 return True
             if self._state == 3:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
@@ -3953,12 +3965,14 @@ class PropertyMonitor(object):
     def on_msg__q2(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
                 self.on_exit_scope(stamp)
                 return True
             if self._state == 3:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
@@ -3969,12 +3983,14 @@ class PropertyMonitor(object):
     def on_msg__q1(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
                 self.on_exit_scope(stamp)
                 return True
             if self._state == 3:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
@@ -4091,12 +4107,14 @@ class PropertyMonitor(object):
                 self.on_enter_scope(stamp)
                 return True
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
                 self.on_exit_scope(stamp)
                 return True
             if self._state == 3:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
@@ -4201,12 +4219,14 @@ class PropertyMonitor(object):
     def on_msg__q(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
                 self.on_exit_scope(stamp)
                 return True
             if self._state == 3:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
@@ -4307,6 +4327,7 @@ class PropertyMonitor(object):
     def on_msg__a(self, msg, stamp):
         with self._lock:
             if self._state == 2:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
@@ -4317,6 +4338,7 @@ class PropertyMonitor(object):
                 self.time_state = stamp
                 return True
             if self._state == 3:
+                # there is no record pool to clear
                 self.witness = []
                 self._state = 1
                 self.time_state = stamp
