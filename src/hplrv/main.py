@@ -194,10 +194,6 @@ PRECEDENCE_REF_EXAMPLES = [
     'globally: /b as B requires /a {data < @B.data}',
 
     'globally: /b as B {data > 0} requires /a {data < @B.data} within 100 ms',
-
-    'globally: /b {@A.data < data} requires /a as A',
-
-    'globally: /b as B {data > 0 and @A.data < data} requires /a as A within 100 ms',
 ]
 
 

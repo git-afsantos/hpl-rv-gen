@@ -255,10 +255,11 @@ class RequirementBuilder(PatternBasedBuilder):
 
     def add_behaviour(self, event):
         for e in event.simple_events():
-            alias = None
-            if self._activator and e.contains_reference(self._activator):
-                alias = self._activator
-            datum = new_behaviour(e.predicate, alias, None)
+            #alias = None
+            #if self._activator and e.contains_reference(self._activator):
+            #    alias = self._activator
+            # FIXME adding activator always to ensure dependent triggers have it
+            datum = new_behaviour(e.predicate, self._activator, None)
             self.on_msg[e.topic][STATE_ACTIVE].append(datum)
 
     def add_trigger(self, event):

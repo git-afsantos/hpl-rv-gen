@@ -46,7 +46,7 @@ class TemplateRenderer(object):
             if not builder.has_trigger_refs:
                 template_file = 'requirement-simple.python.jinja'
             else:
-                template_file = 'requirement.python.jinja'
+                template_file = 'requirement-refs.python.jinja'
         elif hpl_property.pattern.is_response:
             builder = ResponseBuilder(hpl_property)
             template_file = 'response.python.jinja'
