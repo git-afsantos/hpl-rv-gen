@@ -123,10 +123,6 @@ PRECEDENCE_EXAMPLES = [
 
     'globally: /b {data > 0} requires /a {data < 0} within 100 ms',
 
-    #'globally: /b as B requires /a {data < @B.data}',
-
-    #'globally: /b as B {data > 0} requires /a {data < @B.data} within 100 ms',
-
     'globally: (/b1 {data > 0} or /b2 {data < 0}) requires /a',
 
     'globally: (/b1 {data > 0} or /b2 {data < 0}) requires /a within 100 ms',
@@ -194,13 +190,23 @@ PRECEDENCE_EXAMPLES = [
     'after /p until /a: /b requires /a',
 ]
 
+PRECEDENCE_REF_EXAMPLES = [
+    'globally: /b as B requires /a {data < @B.data}',
+
+    'globally: /b as B {data > 0} requires /a {data < @B.data} within 100 ms',
+
+    'globally: /b {@A.data < data} requires /a as A',
+
+    'globally: /b as B {data > 0 and @A.data < data} requires /a as A within 100 ms',
+]
+
 
 def test_me():
     from hpl.parser import property_parser
     p = property_parser()
     r = TemplateRenderer()
     outputs = []
-    for text in PRECEDENCE_EXAMPLES:
+    for text in PRECEDENCE_REF_EXAMPLES:
         hpl_property = p.parse(text)
         code = r.render_monitor(hpl_property)
         outputs.append(code)

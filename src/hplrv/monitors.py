@@ -12,6 +12,9 @@ from builtins import object, str
 from collections import defaultdict, namedtuple
 
 from hpl.ast import HplVacuousTruth
+from hpl.logic import (
+    refactor_reference, replace_var_with_this, replace_this_with_var
+)
 
 from .constants import *
 
@@ -211,17 +214,17 @@ class ExistenceBuilder(PatternBasedBuilder):
 class RequirementBuilder(PatternBasedBuilder):
     def __init__(self, hpl_property):
         self.has_trigger_refs = False
-        b = hpl_property.pattern.behaviour
-        a = hpl_property.pattern.trigger
-        for alias in a.aliases():
-            if b.contains_reference(alias):
-                self.has_trigger_refs = True
-                break
-        else:
-            for alias in b.aliases():
-                if a.contains_reference(alias):
-                    self.has_trigger_refs = True
-                    break
+        self.dependent_predicates = defaultdict(HplVacuousTruth)
+        self.trigger_is_simple = hpl_property.pattern.trigger.is_simple_event
+        self._behaviour = None
+        event = hpl_property.pattern.behaviour
+        if event.is_simple_event:
+            self._behaviour = event.alias
+            if event.alias:
+                for e in hpl_property.pattern.trigger.simple_events():
+                    if e.contains_reference(event.alias):
+                        self.has_trigger_refs = True
+                        break
         super(RequirementBuilder, self).__init__(hpl_property, STATE_ACTIVE)
 
     @property
@@ -252,13 +255,10 @@ class RequirementBuilder(PatternBasedBuilder):
 
     def add_behaviour(self, event):
         for e in event.simple_events():
-            activator = None
+            alias = None
             if self._activator and e.contains_reference(self._activator):
-                activator = self._activator
-            trigger = None
-            if self._trigger and e.contains_reference(self._trigger):
-                trigger = self._trigger
-            datum = new_behaviour(e.predicate, activator, trigger)
+                alias = self._activator
+            datum = new_behaviour(e.predicate, alias, None)
             self.on_msg[e.topic][STATE_ACTIVE].append(datum)
 
     def add_trigger(self, event):
@@ -266,7 +266,15 @@ class RequirementBuilder(PatternBasedBuilder):
             alias = None
             if self._activator and e.contains_reference(self._activator):
                 alias = self._activator
-            datum = new_trigger(e.predicate, alias)
+            if self._behaviour:
+                phi, psi = refactor_reference(e.predicate, self._behaviour)
+                if not psi.is_vacuous:
+                    replace_this_with_var(psi, '1')
+                    replace_var_with_this(psi, self._behaviour)
+                    self.dependent_predicates[e.topic] = psi
+                datum = new_trigger(phi, alias)
+            else:
+                datum = new_trigger(e.predicate, alias)
             states = self.on_msg[e.topic]
             states[STATE_ACTIVE].append(datum)
             if self.has_safe_state:
