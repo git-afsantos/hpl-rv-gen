@@ -189,3 +189,13 @@ if {{ P.inline_predicate(phi, 'msg') }}:
     {%- endif %}
 {%- endif %}
 {%- endmacro %}
+
+{% macro clear_pool(sm) -%}
+{% if sm.pool_size < 0 %}
+self._pool = deque()
+{%- elif sm.pool_size > 0 %}
+self._pool = deque((), {{ sm.pool_size }})
+{%- else %}
+# there is no record pool to clear
+{%- endif %}
+{%- endmacro %}
