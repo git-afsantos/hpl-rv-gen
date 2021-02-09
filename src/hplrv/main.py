@@ -105,11 +105,9 @@ ABSENCE_EXAMPLES = [
 
     'globally: no (/b1 {data > 0} or /b2 {data < 0})  within 100 ms',
 
-    'globally: no (/b {data > 0} or /b {data < 0})  within 100 ms',
-
     'after /b: no /b {3 * data**2 > 0}',
 
-    'after (/p or /q or /b or /b): no /b {data in {1,2,3}}',
+    'after (/p or /q or /b): no /b {data in {1,2,3}}',
 ]
 
 EXISTENCE_EXAMPLES = [e.replace(' no ', ' some ') for e in ABSENCE_EXAMPLES]
