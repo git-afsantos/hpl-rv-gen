@@ -202,13 +202,49 @@ PRECEDENCE_REF_EXAMPLES = [
     'after /p as P until /q {x > @P.x}: /b as B {x = @P.x} requires (/a1 {not (a < 0 or a > @B.b)} or /a2 {a in {0, @B.b}}) within 100 ms'
 ]
 
+RESPONSE_EXAMPLES = [
+    'globally: /a causes /b',
+
+    'globally: /a causes /b within 100 ms',
+
+    'globally: /a {data > 0} causes /b {data < 0}',
+
+    'globally: /a {data > 0} causes /b {data < 0} within 100 ms',
+
+    'globally: (/a1 {data > 0} or /a2 {data < 0}) causes /b within 100 ms',
+
+    'globally: /a causes (/b1 {data > 0} or /b2 {data < 0}) within 100 ms',
+
+    'after /p: /a causes /b within 100 ms',
+
+    'after /p {phi}: /a {data > 0} causes /b {data < 0} within 100 ms',
+
+    'until /q: /a {phi} causes /b {psi} within 100 ms',
+
+    'until /b: /a causes /b within 100 ms',
+
+    'until /a: /a causes /b within 100 ms',
+
+    'after /p {phi} until /q {psi}: /a {alpha} causes /b {beta}',
+
+    'after /p {phi} until /q {psi}: /a {alpha} causes /b {beta} within 100 ms',
+
+    'globally: /a as A causes /b {x < @A.x}',
+
+    'globally: /a as A {x > 0} causes /b {x < @A.x} within 100 ms',
+
+    'globally: /a as A {x > 0} causes (/b1 {x < @A.x} or /b2 {y < @A.y}) within 100 ms',
+
+    'after /p as P until /q {x > @P.x}: /a as A {x = @P.x} causes (/b1 {x < @A.x + @P.x} or /b2 {x in {@P.x, @A.x}}) within 100 ms'
+]
+
 
 def test_me():
     from hpl.parser import property_parser
     p = property_parser()
     r = TemplateRenderer()
     outputs = []
-    for text in PRECEDENCE_REF_EXAMPLES:
+    for text in RESPONSE_EXAMPLES:
         hpl_property = p.parse(text)
         code = r.render_monitor(hpl_property)
         outputs.append(code)
