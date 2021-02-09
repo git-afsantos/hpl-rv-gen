@@ -89,6 +89,7 @@ class PatternBasedBuilder(object):
         if self.timeout == INF:
             self.timeout = -1
         event = hpl_property.scope.activator
+        self.launch_enters_scope = event is None
         if event is not None and event.is_simple_event:
             self._activator = event.alias
         event = hpl_property.pattern.trigger
@@ -322,7 +323,7 @@ class ResponseBuilder(PatternBasedBuilder):
             trigger = None
             if self._trigger and e.contains_reference(self._trigger):
                 trigger = self._trigger
-            datum = new_behaviour(e.predicate, alias, trigger)
+            datum = new_behaviour(e.predicate, activator, trigger)
             self.on_msg[e.topic][STATE_ACTIVE].append(datum)
 
     def add_trigger(self, event):
@@ -332,7 +333,8 @@ class ResponseBuilder(PatternBasedBuilder):
                 alias = self._activator
             datum = new_trigger(e.predicate, alias)
             states = self.on_msg[e.topic]
-            states[STATE_ACTIVE].append(datum)
+            if self.pool_size != 0:
+                states[STATE_ACTIVE].append(datum)
             states[STATE_SAFE].append(datum)
 
 
