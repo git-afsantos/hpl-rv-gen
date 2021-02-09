@@ -84,7 +84,7 @@ class {{ sm.class_name }}(object):
                 raise RuntimeError('monitor is already turned on')
             self._reset()
             self.time_launch = stamp
-            {{ change_to_state(sm.initial_state, returns=false)|indent(12) }}{#- #}
+            {{ change_to_state(sm.initial_state, returns=false, enters_scope=sm.launch_enters_scope)|indent(12) }}{#- #}
         return True
 
     def on_shutdown(self, stamp):
@@ -175,7 +175,7 @@ if {{ P.inline_predicate(phi, 'msg') }}:
 {% if phi.is_vacuous -%}
     {% if phi.is_true -%}
 {{ caller() }}
-        {% if returns %}
+        {% if returns -%}
 return True
         {%- endif %}
     {%- else -%}
