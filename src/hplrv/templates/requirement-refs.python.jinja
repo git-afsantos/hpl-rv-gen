@@ -109,7 +109,7 @@ assert len(self.witness) >= 1, 'missing activator'
 v_{{ event.activator }} = self.witness[0].msg
     {% endif %}
     {% call G.do_if(event.predicate) %}
-self._pool.append(MsgRecord('{{ topic }}', stamp, msg))
+{{ G.add_to_pool(sm, topic) }}
     {%- endcall %}
 {%- endmacro %}
 

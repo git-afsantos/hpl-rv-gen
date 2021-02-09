@@ -190,6 +190,22 @@ if {{ P.inline_predicate(phi, 'msg') }}:
 {%- endif %}
 {%- endmacro %}
 
+{% macro add_to_pool(sm, topic) -%}
+{% if sm.pool_size == 0 %}
+# there is no pool to add this message to
+{%- elif sm.pool_size == 1 -%}
+self._pool.append(MsgRecord('{{ topic }}', stamp, msg))
+{%- else -%}
+rec = MsgRecord('{{ topic }}', stamp, msg)
+for i in range(len(self._pool), 0, -1):
+    if stamp >= self._pool[i-1].timestamp:
+        self._pool.insert(i, rec)
+        break
+else:
+    self._pool.appendleft(rec)
+{%- endif %}
+{%- endmacro %}
+
 {% macro clear_pool(sm) -%}
 {% if sm.pool_size < 0 %}
 self._pool = deque()
