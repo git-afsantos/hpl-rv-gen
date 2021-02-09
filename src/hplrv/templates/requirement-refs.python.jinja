@@ -70,7 +70,7 @@ assert len(self.witness) >= 1, 'missing activator'
 v_{{ event.activator }} = self.witness[0].msg
     {% endif %}
     {% call G.change_to_state_if(event.predicate, G.STATE_FALSE) %}
-{{ _check_trigger(sm) }}
+{{ _check_trigger(sm) }}{# -#}
 self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
     {%- endcall %}
 {%- endmacro %}
@@ -81,10 +81,10 @@ for rec in self._pool:
     {% if sm.trigger_is_simple %}
         {% for phi in sm.dependent_predicates.values() %}
 {{ _drop_if(phi)|indent(4, first=true) }}
-        {%- endfor %}
+        {% endfor %}
     {%- else %}
         {% for topic, phi in sm.dependent_predicates.items() %}
-    if rec.topic == {{ topic }}:
+    if rec.topic == '{{ topic }}':
 {{ _drop_if(phi)|indent(8, first=true) }}
         {% endfor %}
     {%- endif %}
