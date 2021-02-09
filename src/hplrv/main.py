@@ -194,6 +194,12 @@ PRECEDENCE_REF_EXAMPLES = [
     'globally: /b as B requires /a {data < @B.data}',
 
     'globally: /b as B {data > 0} requires /a {data < @B.data} within 100 ms',
+
+    'globally: /b as B {x > 0} requires /a {x < 0 and y < @B.y}',
+
+    'globally: /b as B {x > 0} requires /a {forall i in array: (array[@i] > 0 and array[@i] < @B.x)} within 100 ms',
+
+    'after /p as P until /q {x > @P.x}: /b as B {x = @P.x} requires (/a1 {not (a < 0 or a > @B.b)} or /a2 {a in {0, @B.b}}) within 100 ms'
 ]
 
 
