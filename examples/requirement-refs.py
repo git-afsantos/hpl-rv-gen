@@ -75,7 +75,13 @@ class PropertyMonitor(object):
     def on_msg__a(self, msg, stamp):
         with self._lock:
             if self._state == 2:
-                self._pool.append(MsgRecord('/a', stamp, msg))
+                rec = MsgRecord('/a', stamp, msg)
+                for i in range(len(self._pool), 0, -1):
+                    if stamp >= self._pool[i-1].timestamp:
+                        self._pool.insert(i, rec)
+                        break
+                else:
+                    self._pool.appendleft(rec)
                 return True
         return False
 
@@ -177,7 +183,13 @@ class PropertyMonitor(object):
                 while self._pool and (stamp - self._pool[0].timestamp) >= 0.1:
                     self._pool.popleft()
             if self._state == 2:
-                self._pool.append(MsgRecord('/a', stamp, msg))
+                rec = MsgRecord('/a', stamp, msg)
+                for i in range(len(self._pool), 0, -1):
+                    if stamp >= self._pool[i-1].timestamp:
+                        self._pool.insert(i, rec)
+                        break
+                else:
+                    self._pool.appendleft(rec)
                 return True
         return False
 
@@ -270,7 +282,13 @@ class PropertyMonitor(object):
         with self._lock:
             if self._state == 2:
                 if (msg.x < 0):
-                    self._pool.append(MsgRecord('/a', stamp, msg))
+                    rec = MsgRecord('/a', stamp, msg)
+                    for i in range(len(self._pool), 0, -1):
+                        if stamp >= self._pool[i-1].timestamp:
+                            self._pool.insert(i, rec)
+                            break
+                    else:
+                        self._pool.appendleft(rec)
                     return True
         return False
 
@@ -373,7 +391,13 @@ class PropertyMonitor(object):
                     self._pool.popleft()
             if self._state == 2:
                 if all((msg.array[v_i] > 0) for v_i in range(len(msg.array))):
-                    self._pool.append(MsgRecord('/a', stamp, msg))
+                    rec = MsgRecord('/a', stamp, msg)
+                    for i in range(len(self._pool), 0, -1):
+                        if stamp >= self._pool[i-1].timestamp:
+                            self._pool.insert(i, rec)
+                            break
+                    else:
+                        self._pool.appendleft(rec)
                     return True
         return False
 
@@ -457,7 +481,13 @@ class PropertyMonitor(object):
                 while self._pool and (stamp - self._pool[0].timestamp) >= 0.1:
                     self._pool.popleft()
             if self._state == 2:
-                self._pool.append(MsgRecord('/a2', stamp, msg))
+                rec = MsgRecord('/a2', stamp, msg)
+                for i in range(len(self._pool), 0, -1):
+                    if stamp >= self._pool[i-1].timestamp:
+                        self._pool.insert(i, rec)
+                        break
+                else:
+                    self._pool.appendleft(rec)
                 return True
         return False
 
@@ -468,7 +498,13 @@ class PropertyMonitor(object):
                     self._pool.popleft()
             if self._state == 2:
                 if (not (msg.a < 0)):
-                    self._pool.append(MsgRecord('/a1', stamp, msg))
+                    rec = MsgRecord('/a1', stamp, msg)
+                    for i in range(len(self._pool), 0, -1):
+                        if stamp >= self._pool[i-1].timestamp:
+                            self._pool.insert(i, rec)
+                            break
+                    else:
+                        self._pool.appendleft(rec)
                     return True
         return False
 
