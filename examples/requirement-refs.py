@@ -44,6 +44,7 @@ class PropertyMonitor(object):
             self.time_launch = stamp
             self._state = 2
             self.time_state = stamp
+            self.on_enter_scope(stamp)
         return True
 
     def on_shutdown(self, stamp):
@@ -141,6 +142,7 @@ class PropertyMonitor(object):
             self.time_launch = stamp
             self._state = 2
             self.time_state = stamp
+            self.on_enter_scope(stamp)
         return True
 
     def on_shutdown(self, stamp):
@@ -249,6 +251,7 @@ class PropertyMonitor(object):
             self.time_launch = stamp
             self._state = 2
             self.time_state = stamp
+            self.on_enter_scope(stamp)
         return True
 
     def on_shutdown(self, stamp):
@@ -348,6 +351,7 @@ class PropertyMonitor(object):
             self.time_launch = stamp
             self._state = 2
             self.time_state = stamp
+            self.on_enter_scope(stamp)
         return True
 
     def on_shutdown(self, stamp):
