@@ -287,7 +287,53 @@ class RequirementBuilder(PatternBasedBuilder):
 ###############################################################################
 
 class ResponseBuilder(PatternBasedBuilder):
-    pass
+    def __init__(self, hpl_property):
+        super(ResponseBuilder, self).__init__(hpl_property, STATE_SAFE)
+
+    def calc_pool_size(self, hpl_property):
+        if self._trigger:
+            for e in hpl_property.pattern.behaviour.simple_events():
+                if e.contains_reference(self._trigger):
+                    return -1
+        # no alias, no refs
+        return 1 if self.timeout >= 0 else 0
+
+    def add_terminator(self, event):
+        # must be called before pattern events
+        for e in event.simple_events():
+            alias = None
+            if self._activator and e.contains_reference(self._activator):
+                alias = self._activator
+            states = self.on_msg[e.topic]
+            datum = new_terminator(e.predicate, alias, False)
+            states[STATE_ACTIVE].append(datum)
+            if self.reentrant_scope:
+                datum = new_terminator(e.predicate, alias, None)
+                states[STATE_SAFE].append(datum)
+            else:
+                datum = new_terminator(e.predicate, alias, True)
+                states[STATE_SAFE].append(datum)
+
+    def add_behaviour(self, event):
+        for e in event.simple_events():
+            activator = None
+            if self._activator and e.contains_reference(self._activator):
+                activator = self._activator
+            trigger = None
+            if self._trigger and e.contains_reference(self._trigger):
+                trigger = self._trigger
+            datum = new_behaviour(e.predicate, alias, trigger)
+            self.on_msg[e.topic][STATE_ACTIVE].append(datum)
+
+    def add_trigger(self, event):
+        for e in event.simple_events():
+            alias = None
+            if self._activator and e.contains_reference(self._activator):
+                alias = self._activator
+            datum = new_trigger(e.predicate, alias)
+            states = self.on_msg[e.topic]
+            states[STATE_ACTIVE].append(datum)
+            states[STATE_SAFE].append(datum)
 
 
 ###############################################################################
@@ -295,4 +341,48 @@ class ResponseBuilder(PatternBasedBuilder):
 ###############################################################################
 
 class PreventionBuilder(PatternBasedBuilder):
-    pass
+    def __init__(self, hpl_property):
+        super(PreventionBuilder, self).__init__(hpl_property, STATE_SAFE)
+
+    def calc_pool_size(self, hpl_property):
+        if self._trigger:
+            for e in hpl_property.pattern.behaviour.simple_events():
+                if e.contains_reference(self._trigger):
+                    return -1
+        # no alias, no refs
+        return 1 if self.timeout >= 0 else 0
+
+    def add_terminator(self, event):
+        # must be called before pattern events
+        for e in event.simple_events():
+            alias = None
+            if self._activator and e.contains_reference(self._activator):
+                alias = self._activator
+            if self.reentrant_scope:
+                datum = new_terminator(e.predicate, alias, None)
+            else:
+                datum = new_terminator(e.predicate, alias, True)
+            states = self.on_msg[e.topic]
+            states[STATE_ACTIVE].append(datum)
+            states[STATE_SAFE].append(datum)
+
+    def add_behaviour(self, event):
+        for e in event.simple_events():
+            activator = None
+            if self._activator and e.contains_reference(self._activator):
+                activator = self._activator
+            trigger = None
+            if self._trigger and e.contains_reference(self._trigger):
+                trigger = self._trigger
+            datum = new_behaviour(e.predicate, alias, trigger)
+            self.on_msg[e.topic][STATE_ACTIVE].append(datum)
+
+    def add_trigger(self, event):
+        for e in event.simple_events():
+            alias = None
+            if self._activator and e.contains_reference(self._activator):
+                alias = self._activator
+            datum = new_trigger(e.predicate, alias)
+            states = self.on_msg[e.topic]
+            states[STATE_ACTIVE].append(datum)
+            states[STATE_SAFE].append(datum)
