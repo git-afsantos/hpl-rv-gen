@@ -236,13 +236,15 @@ RESPONSE_EXAMPLES = [
     'after /p as P until /q {x > @P.x}: /a as A {x = @P.x} causes (/b1 {x < @A.x + @P.x} or /b2 {x in {@P.x, @A.x}}) within 100 ms'
 ]
 
+PREVENTION_EXAMPLES = [p.replace('causes', 'forbids') for p in RESPONSE_EXAMPLES]
+
 
 def test_me():
     from hpl.parser import property_parser
     p = property_parser()
     r = TemplateRenderer()
     outputs = []
-    for text in RESPONSE_EXAMPLES:
+    for text in PREVENTION_EXAMPLES:
         hpl_property = p.parse(text)
         code = r.render_monitor(hpl_property)
         outputs.append(code)
