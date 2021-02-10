@@ -352,7 +352,7 @@ class PreventionBuilder(PatternBasedBuilder):
                 if e.contains_reference(self._trigger):
                     return -1
         # no alias, no refs
-        return 1 if self.timeout >= 0 else 0
+        return 1 # if self.timeout >= 0 else 0
 
     def add_terminator(self, event):
         # must be called before pattern events
@@ -376,7 +376,7 @@ class PreventionBuilder(PatternBasedBuilder):
             trigger = None
             if self._trigger and e.contains_reference(self._trigger):
                 trigger = self._trigger
-            datum = new_behaviour(e.predicate, alias, trigger)
+            datum = new_behaviour(e.predicate, activator, trigger)
             self.on_msg[e.topic][STATE_ACTIVE].append(datum)
 
     def add_trigger(self, event):
@@ -386,5 +386,6 @@ class PreventionBuilder(PatternBasedBuilder):
                 alias = self._activator
             datum = new_trigger(e.predicate, alias)
             states = self.on_msg[e.topic]
-            states[STATE_ACTIVE].append(datum)
+            if self.pool_size != 0:
+                states[STATE_ACTIVE].append(datum)
             states[STATE_SAFE].append(datum)
