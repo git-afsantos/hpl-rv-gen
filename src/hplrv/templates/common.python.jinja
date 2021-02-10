@@ -26,7 +26,7 @@
 {% set CALLBACK_MSG = 2 %}
 
 {##############################################################################}
-{# PUBLIC MACROS #}
+{# STATE MACHINE MONITOR CLASS #}
 {##############################################################################}
 
 {# from __future__ import unicode_literals #}
@@ -133,6 +133,44 @@ class {{ sm.class_name }}(object):
         pass
 {%- endmacro %}
 
+
+{##############################################################################}
+{# COMMON EVENTS #}
+{##############################################################################}
+
+{% macro activator_event(event, topic) -%}
+    {% call change_to_state_if(event.predicate, STATE_ACTIVE, enters_scope=true) %}
+self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
+    {%- endcall %}
+{%- endmacro %}
+
+{% macro terminator_event(sm, event, topic) -%}
+    {% if event.activator %}
+assert len(self.witness) >= 1, 'missing activator event'
+v_{{ event.activator }} = self.witness[0].msg
+    {% endif %}
+    {% if event.verdict == true %}
+        {% call change_to_state_if(event.predicate, STATE_TRUE, exits_scope=true) %}
+{{ clear_pool(sm) }}
+self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
+        {%- endcall %}
+    {% elif event.verdict == false %}
+        {% call change_to_state_if(event.predicate, STATE_FALSE, exits_scope=true) %}
+{{ clear_pool(sm) }}
+self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
+        {%- endcall %}
+    {% else %}
+        {% call change_to_state_if(event.predicate, STATE_INACTIVE, exits_scope=true) %}
+{{ clear_pool(sm) }}
+self.witness = []
+        {%- endcall %}
+    {% endif %}
+{%- endmacro %}
+
+{##############################################################################}
+{# STATE JUMPING #}
+{##############################################################################}
+
 {# assume: local('stamp') #}
 {# 's': int #}
 {% macro change_to_state(s, returns=true, enters_scope=false, exits_scope=false) %}
@@ -171,6 +209,10 @@ if {{ P.inline_predicate(phi, 'msg') }}:
 {%- endif %}
 {%- endmacro %}
 
+{##############################################################################}
+{# CONTROL FLOW #}
+{##############################################################################}
+
 {% macro do_if(phi, returns=true) -%}
 {% if phi.is_vacuous -%}
     {% if phi.is_true -%}
@@ -190,6 +232,10 @@ if {{ P.inline_predicate(phi, 'msg') }}:
 {%- endif %}
 {%- endmacro %}
 
+{##############################################################################}
+{# MESSAGE POOL MANAGEMENT #}
+{##############################################################################}
+
 {% macro add_to_pool(sm, topic) -%}
 {% if sm.pool_size == 0 %}
 # there is no pool to add this message to
@@ -207,6 +253,14 @@ else:
 {%- endmacro %}
 
 {% macro clear_pool(sm) -%}
+{% if sm.pool_size != 0 %}
+self._pool.clear()
+{%- else %}
+# there is no record pool to clear
+{%- endif %}
+{%- endmacro %}
+
+{% macro clear_pool_new(sm) -%}
 {% if sm.pool_size < 0 %}
 self._pool = deque()
 {%- elif sm.pool_size > 0 %}

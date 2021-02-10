@@ -28,10 +28,10 @@ if self._state == {{ G.STATE_ACTIVE }}:
 {% macro _on_msg(sm, event, topic, from_state) -%}
 {% if event.event_type == G.EVENT_ACTIVATOR %}
 {# after or after-until -#}
-{{ _activator(event, topic) }}
+{{ G.activator_event(event, topic) }}
 {%- elif event.event_type == G.EVENT_TERMINATOR %}
 {# until or after-until -#}
-{{ _terminator(sm, event, topic) }}
+{{ G.terminator_event(sm, event, topic) }}
 {%- elif event.event_type == G.EVENT_BEHAVIOUR %}
 {{ _behaviour(sm, event, topic) }}
 {%- elif event.event_type == G.EVENT_TRIGGER %}
@@ -39,35 +39,6 @@ if self._state == {{ G.STATE_ACTIVE }}:
 {%- else %}
 assert False, 'unexpected event type: {{ event.event_type }}'
 {%- endif %}
-{%- endmacro %}
-
-{% macro _activator(event, topic) -%}
-    {% call G.change_to_state_if(event.predicate, G.STATE_ACTIVE, enters_scope=true) %}
-self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
-    {%- endcall %}
-{%- endmacro %}
-
-{% macro _terminator(sm, event, topic) -%}
-    {% if event.activator %}
-assert len(self.witness) >= 1, 'missing activator event'
-v_{{ event.activator }} = self.witness[0].msg
-    {% endif %}
-    {% if event.verdict == true %}
-        {% call G.change_to_state_if(event.predicate, G.STATE_TRUE, exits_scope=true) %}
-{{ G.clear_pool(sm) }}
-self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
-        {%- endcall %}
-    {% elif event.verdict == false %}
-        {% call G.change_to_state_if(event.predicate, G.STATE_FALSE, exits_scope=true) %}
-{{ G.clear_pool(sm) }}
-self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
-        {%- endcall %}
-    {% else %}
-        {% call G.change_to_state_if(event.predicate, G.STATE_INACTIVE, exits_scope=true) %}
-{{ G.clear_pool(sm) }}
-self.witness = []
-        {%- endcall %}
-    {% endif %}
 {%- endmacro %}
 
 {% macro _behaviour(sm, event, topic) -%}
@@ -79,13 +50,14 @@ assert len(self.witness) >= 1, 'missing activator event'
 v_{{ event.activator }} = self.witness[0].msg
     {% endif %}
     {% if event.trigger %}
-matched = False
-for i in range(len(self._pool) - 1, -1, -1):
+n = len(self._pool)
+for i in range(n - 1, -1, -1):
     v_{{ event.trigger }} = self._pool[i].msg
 {{ _drop_if(event.predicate)|indent(4, first=true) -}}
 if not self._pool:
 {{ G.change_to_state(G.STATE_SAFE, returns=false)|indent(4, first=true) -}}
-return matched
+if len(self._pool) != n:
+    return True
     {%- else %}
         {% call G.change_to_state_if(event.predicate, G.STATE_SAFE) %}
 # all stimuli have their response
@@ -97,7 +69,6 @@ return matched
 {% macro _drop_if(phi) -%}
     {% call G.do_if(phi, returns=false) %}
 self._pool.pop()
-matched = True
     {%- endcall %}
 {%- endmacro %}
 

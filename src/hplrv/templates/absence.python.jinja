@@ -21,40 +21,18 @@ if self._state == {{ G.STATE_ACTIVE }} and (stamp - self.time_state) >= {{ sm.ti
 {# MSG EVENT MACROS #}
 {##############################################################################}
 
-{% macro _on_msg(event, topic) -%}
+{% macro _on_msg(sm, event, topic) -%}
 {% if event.event_type == G.EVENT_ACTIVATOR %}
 {# after or after-until -#}
-{{ _activator(event, topic) }}
+{{ G.activator_event(event, topic) }}
 {%- elif event.event_type == G.EVENT_TERMINATOR %}
 {# until or after-until -#}
-{{ _terminator(event, topic) }}
+{{ G.terminator_event(sm, event, topic) }}
 {%- elif event.event_type == G.EVENT_BEHAVIOUR %}
 {{ _behaviour(event, topic) }}
 {%- else %}
 assert False, 'unexpected event type: {{ event.event_type }}'
 {%- endif %}
-{%- endmacro %}
-
-{% macro _activator(event, topic) -%}
-    {% call G.change_to_state_if(event.predicate, G.STATE_ACTIVE, enters_scope=true) %}
-self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
-    {%- endcall %}
-{%- endmacro %}
-
-{% macro _terminator(event, topic) -%}
-    {% if event.activator %}
-assert len(self.witness) >= 1, 'missing activator'
-v_{{ event.activator }} = self.witness[0].msg
-    {% endif %}
-    {% if event.verdict %}
-        {% call G.change_to_state_if(event.predicate, G.STATE_TRUE, exits_scope=true) %}
-self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
-        {%- endcall %}
-    {% else %}
-        {% call G.change_to_state_if(event.predicate, G.STATE_INACTIVE, exits_scope=true) %}
-self.witness = []
-        {%- endcall %}
-    {% endif %}
 {%- endmacro %}
 
 {% macro _behaviour(event, topic) -%}
@@ -77,7 +55,7 @@ self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
     {% if cb == G.CALLBACK_TIMER -%}
 {{ _on_timer(state_machine) }}
     {%- elif cb == G.CALLBACK_MSG -%}
-{{ _on_msg(varargs[0], varargs[1]) }}
+{{ _on_msg(state_machine, varargs[0], varargs[1]) }}
     {%- else -%}
 assert False, 'unexpected macro function type: {{ args }}'
     {%- endif %}
