@@ -8,184 +8,78 @@
 ###############################################################################
 
 from __future__ import print_function, unicode_literals
-from builtins import object, range
-from collections import deque, namedtuple
-from threading import Lock
+from builtins import object, range  # needed by PropertyMonitor
+from collections import deque       # needed by PropertyMonitor
+from threading import Lock          # needed by PropertyMonitor
 import unittest
 
 from hpl.parser import property_parser
 
-from hplrv.constants import *
+from hplrv.constants import (
+    STATE_OFF, STATE_TRUE, STATE_FALSE,
+    STATE_INACTIVE, STATE_ACTIVE, STATE_SAFE
+)
 from hplrv.rendering import TemplateRenderer
 
-
-###############################################################################
-# Data Structures
-###############################################################################
-
-E_TIMER = 0
-E_ACTIVATOR = 1
-E_TERMINATOR = 2
-E_BEHAVIOUR = 3
-E_TRIGGER = 4
-E_SPAM = 5
-
-MsgRecord = namedtuple("MsgRecord", ('topic', 'timestamp', 'msg'))
-
-ActivatorEvent = namedtuple('ActivatorEvent',
-    ('event', 'topic', 'msg', 'state'))
-
-def new_activator(msg, state, topic='p'):
-    # topic: str
-    # msg: object
-    # state: int (target state)
-    return ActivatorEvent(E_ACTIVATOR, topic, msg, state)
-
-
-TerminatorEvent = namedtuple('TerminatorEvent',
-    ('event', 'topic', 'msg', 'state'))
-
-def new_terminator(msg, state, topic='q'):
-    # topic: str
-    # msg: object
-    # state: int (target state)
-    return TerminatorEvent(E_TERMINATOR, topic, msg, state)
-
-BehaviourEvent = namedtuple('BehaviourEvent',
-    ('event', 'topic', 'msg', 'state'))
-
-def new_behaviour(msg, state, topic='b'):
-    # topic: str
-    # msg: object
-    # state: int (target state)
-    return BehaviourEvent(E_BEHAVIOUR, topic, msg, state)
-
-TriggerEvent = namedtuple('TriggerEvent',
-    ('event', 'topic', 'msg', 'state'))
-
-def new_trigger(msg, state, topic='a'):
-    # topic: str
-    # msg: object
-    # state: int (target state)
-    return TriggerEvent(E_TRIGGER, topic, msg, state)
-
-SpamEvent = namedtuple('SpamEvent',
-    ('event', 'topic', 'msg'))
-
-def new_spam(topic, msg):
-    # topic: str
-    # msg: object
-    return SpamEvent(E_SPAM, topic, msg)
-
-TimerEvent = namedtuple('TimerEvent',
-    ('event', 'state', 'drops'))
-
-def new_timer(state=None, drops=0):
-    # state: int (target state)
-    # drops: int (triggers dropped)
-    return TimerEvent(E_TIMER, state, drops)
-
-
-Point2D = namedtuple('Point2D', ('x', 'y'))
-
-def p2d(x=0, y=0):
-    return Point2D(x, y)
-
-Array = namedtuple('Vectors', ('array',))
-
+from .common_data import *
+from .absence_traces import *
 
 ###############################################################################
 # Test Case Generation
 ###############################################################################
 
-def openings_globally():
-    valid = [
-        [],
-        [new_spam('p', p2d())],
-        [new_spam('q', p2d())],
-        [new_spam('a', p2d())],
-        [new_spam('b', p2d())],
-        [
-            new_spam('p', p2d()),
-            new_spam('p', p2d())
-        ],
-    ]
-    invalid = ()
-    return valid, invalid
-
-def openings_after(s0):
-    valid = [
-        [new_activator(p2d(x=1), s0)],
-        [
-            new_spam('p', p2d()),
-            new_activator(p2d(x=1), s0)
-        ],
-        [
-            new_spam('q', p2d()),
-            new_activator(p2d(x=1), s0)
-        ],
-        [
-            new_spam('a', p2d()),
-            new_activator(p2d(x=1), s0)
-        ],
-        [
-            new_spam('b', p2d()),
-            new_activator(p2d(x=1), s0)
-        ],
-    ]
-    invalid = [
-        [],
-        [],
-        [new_spam('q', p2d())],
-        [new_spam('a', p2d())],
-        [new_spam('b', p2d())],
-        [
-            new_spam('p', p2d(x=-1)),
-            new_spam('p', p2d())
-        ],
-    ]
-    return valid, invalid
-
-SCOPES = (
-    'globally',
-    'after p as P {x > 0}',
-    'until q {x > 0}',
-    'after p as P {x > 0} until q {x > @P.x}',
-)
-
 def absence_properties():
-    text = 'globally: no b {x > 0}'
-    traces = []
-    # valid
-    traces.append([])
-    traces.append([ new_timer(STATE_ACTIVE) ])
-    traces.append([ new_spam('b', p2d()) ])
-    traces.append([
-        new_spam('b', p2d(x=-1)),
-        new_timer(),
-        new_spam('b', p2d(x=-2)),
-    ])
-    # invalid
-    traces.append([ new_behaviour(p2d(x=1), STATE_FALSE) ])
-    traces.append([
-        new_spam('b', p2d()),
-        new_timer(),
-        new_behaviour(p2d(x=1), STATE_FALSE),
-        new_timer(),
-        new_spam('b', p2d()),
-    ])
-    yield (text, traces)
+    yield globally_no()
+    yield globally_no_within()
+    yield after_no()
+    yield after_no_within()
+    yield until_no()
+    yield until_no_within()
+    yield after_until_no()
+    yield after_until_no_within()
 
 def existence_properties():
+    # yield globally_no()
+    # yield globally_no_within()
+    # yield after_no()
+    # yield after_no_within()
+    # yield until_no()
+    # yield until_no_within()
+    # yield after_until_no()
+    # yield after_until_no_within()
     return ()
 
 def precedence_properties():
+    # yield globally_no()
+    # yield globally_no_within()
+    # yield after_no()
+    # yield after_no_within()
+    # yield until_no()
+    # yield until_no_within()
+    # yield after_until_no()
+    # yield after_until_no_within()
     return ()
 
 def response_properties():
+    # yield globally_no()
+    # yield globally_no_within()
+    # yield after_no()
+    # yield after_no_within()
+    # yield until_no()
+    # yield until_no_within()
+    # yield after_until_no()
+    # yield after_until_no_within()
     return ()
 
 def prevention_properties():
+    # yield globally_no()
+    # yield globally_no_within()
+    # yield after_no()
+    # yield after_no_within()
+    # yield until_no()
+    # yield until_no_within()
+    # yield after_until_no()
+    # yield after_until_no_within()
     return ()
 
 def all_types_of_property():
@@ -219,6 +113,8 @@ def state_name(s):
         return 'ACTIVE'
     if s == STATE_SAFE:
         return 'SAFE'
+    if s is None:
+        return '(none)'
     return 'STATE {}'.format(s)
 
 def pretty_trace(trace):
@@ -356,7 +252,7 @@ class TestMonitorClasses(unittest.TestCase):
         assert consumed, self.debug_string
         assert len(self.entered_scope) == n + 1, self.debug_string
         assert self.entered_scope[-1] == time, self.debug_string
-        assert not self.exited_scope, self.debug_string
+        assert len(self.exited_scope) == n, self.debug_string
         assert not self.found_success, self.debug_string
         assert not self.found_failure, self.debug_string
         assert m._state == event.state, self.debug_string
@@ -411,8 +307,6 @@ class TestMonitorClasses(unittest.TestCase):
     def _dispatch_spam(self, m, event, time):
         a = len(self.entered_scope)
         b = len(self.exited_scope)
-        c = len(self.found_success)
-        d = len(self.found_failure)
         k = len(getattr(m, '_pool', ()))
         n = len(m.witness)
         s = m._state
@@ -422,12 +316,8 @@ class TestMonitorClasses(unittest.TestCase):
         assert not consumed, self.debug_string
         assert len(self.entered_scope) == a, self.debug_string
         assert len(self.exited_scope) == b, self.debug_string
-        assert len(self.found_success) == c, self.debug_string
-        assert len(self.found_failure) == d, self.debug_string
         assert len(getattr(m, '_pool', ())) == k, self.debug_string
-        assert len(m.witness) == n, self.debug_string
-        assert m._state == s, self.debug_string
-        assert m.time_state == t, self.debug_string
+        self._check_automatic_transition(m, event.state, time, s, t)
 
     def _dispatch_msg(self, m, topic, msg, time):
         cb = getattr(m, 'on_msg_' + topic)
@@ -438,33 +328,13 @@ class TestMonitorClasses(unittest.TestCase):
         b = len(self.exited_scope)
         k = len(getattr(m, '_pool', ()))
         s = m._state
+        t = m.time_state
         m.on_timer(time)
         self._update_debug_string(m, time)
         assert len(self.entered_scope) == a, self.debug_string
         assert len(self.exited_scope) == b, self.debug_string
         assert len(getattr(m, '_pool', ())) <= k, self.debug_string
-        if event.state == STATE_TRUE:
-            assert len(self.found_success) == 1, self.debug_string
-            assert self.found_success[0][0] == time, self.debug_string
-            assert self.found_success[0][1] == m.witness, self.debug_string
-            assert m.verdict is True, self.debug_string
-            assert m.time_state == time, self.debug_string
-            assert m._state == event.state, self.debug_string
-        elif event.state == STATE_FALSE:
-            assert len(self.found_failure) == 1, self.debug_string
-            assert self.found_failure[0][0] == time, self.debug_string
-            assert self.found_failure[0][1] == m.witness, self.debug_string
-            assert m.verdict is False, self.debug_string
-            assert m.time_state == time, self.debug_string
-            assert m._state == event.state, self.debug_string
-        elif event.state is not None:
-            assert not self.found_success, self.debug_string
-            assert not self.found_failure, self.debug_string
-            assert m.verdict is None, self.debug_string
-            assert not m.witness, self.debug_string
-            assert m._state == event.state, self.debug_string
-        else:
-            assert m._state == s, self.debug_string
+        self._check_automatic_transition(m, event.state, time, s, t)
 
     def _shutdown(self, m):
         m.on_shutdown(1000)
@@ -506,6 +376,30 @@ class TestMonitorClasses(unittest.TestCase):
             assert not self.found_success, self.debug_string
             assert not self.found_failure, self.debug_string
             assert m.verdict is None, self.debug_string
+
+    def _check_automatic_transition(self, m, s2, t2, s1, t1):
+        if s2 == STATE_TRUE:
+            assert len(self.found_success) == 1, self.debug_string
+            assert self.found_success[0][0] == t2, self.debug_string
+            assert self.found_success[0][1] == m.witness, self.debug_string
+            assert m.verdict is True, self.debug_string
+            assert m.time_state == t2, self.debug_string
+            assert m._state == s2, self.debug_string
+        elif s2 == STATE_FALSE:
+            assert len(self.found_failure) == 1, self.debug_string
+            assert self.found_failure[0][0] == t2, self.debug_string
+            assert self.found_failure[0][1] == m.witness, self.debug_string
+            assert m.verdict is False, self.debug_string
+            assert m.time_state == t2, self.debug_string
+            assert m._state == s2, self.debug_string
+        elif s2 is not None:
+            assert not self.found_success, self.debug_string
+            assert not self.found_failure, self.debug_string
+            assert m.verdict is None, self.debug_string
+            assert m._state == s2, self.debug_string
+        else:
+            assert m._state == s1, self.debug_string
+            assert m.time_state == t1, self.debug_string
 
     def _on_enter(self, stamp):
         self.entered_scope.append(stamp)
