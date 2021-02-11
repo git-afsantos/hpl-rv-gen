@@ -91,4 +91,10 @@ Point2D = namedtuple('Point2D', ('x', 'y'))
 def p2d(x=0, y=0):
     return Point2D(x, y)
 
-Array = namedtuple('Vectors', ('array',))
+Array = namedtuple('Vectors', ('xs',))
+
+EMPTY_ARRAY = Array(())
+ARRAY_000 = Array((0, 0, 0))
+ARRAY_010 = Array((0, 1, 0))
+ARRAY_111 = Array((1, 1, 1))
+ARRAY_123 = Array((1, 2, 3))

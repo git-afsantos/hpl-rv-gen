@@ -23,6 +23,7 @@ from hplrv.rendering import TemplateRenderer
 
 from .common_data import *
 from .absence_traces import *
+from .existence_traces import *
 
 ###############################################################################
 # Test Case Generation
@@ -39,15 +40,14 @@ def absence_properties():
     yield after_until_no_within()
 
 def existence_properties():
-    # yield globally_no()
-    # yield globally_no_within()
-    # yield after_no()
-    # yield after_no_within()
-    # yield until_no()
-    # yield until_no_within()
-    # yield after_until_no()
-    # yield after_until_no_within()
-    return ()
+    yield globally_some()
+    yield globally_some_within()
+    yield after_some()
+    yield after_some_within()
+    yield until_some()
+    yield until_some_within()
+    yield after_until_some()
+    yield after_until_some_within()
 
 def precedence_properties():
     # yield globally_no()
@@ -152,6 +152,15 @@ def pretty_monitor(m):
         'm.witness = {}'.format(m.witness),
         'm._pool = {}'.format(getattr(m, '_pool', None)),
     ))
+
+
+def prod(iterable):
+    x = 1
+    for y in iterable:
+        x = x * y
+        if x == 0:
+            return 0
+    return x
 
 
 class TestMonitorClasses(unittest.TestCase):
