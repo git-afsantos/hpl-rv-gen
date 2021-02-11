@@ -11,6 +11,7 @@ from __future__ import print_function, unicode_literals
 from builtins import object, range
 from collections import deque, namedtuple
 from threading import Lock
+import unittest
 
 from hpl.parser import property_parser
 
@@ -85,42 +86,132 @@ def new_timer(state, drops=0):
     return TimerEvent(E_TIMER, state, drops)
 
 
+Point2D = namedtuple('Point2D', ('x', 'y'))
+
+def p2d(x=0, y=0):
+    return Point2D(x, y)
+
+Array = namedtuple('Vectors', ('array',))
+
+
 ###############################################################################
 # Test Case Generation
 ###############################################################################
 
+def openings_globally():
+    valid = [
+        [],
+        [new_spam('p', p2d())],
+        [new_spam('q', p2d())],
+        [new_spam('a', p2d())],
+        [new_spam('b', p2d())],
+        [
+            new_spam('p', p2d()),
+            new_spam('p', p2d())
+        ],
+    ]
+    invalid = ()
+    return valid, invalid
+
+def openings_after(s0):
+    valid = [
+        [new_activator(p2d(x=1), s0)],
+        [
+            new_spam('p', p2d()),
+            new_activator(p2d(x=1), s0)
+        ],
+        [
+            new_spam('q', p2d()),
+            new_activator(p2d(x=1), s0)
+        ],
+        [
+            new_spam('a', p2d()),
+            new_activator(p2d(x=1), s0)
+        ],
+        [
+            new_spam('b', p2d()),
+            new_activator(p2d(x=1), s0)
+        ],
+    ]
+    invalid = [
+        [],
+        [],
+        [new_spam('q', p2d())],
+        [new_spam('a', p2d())],
+        [new_spam('b', p2d())],
+        [
+            new_spam('p', p2d(x=-1)),
+            new_spam('p', p2d())
+        ],
+    ]
+    return valid, invalid
+
+SCOPES = (
+    'globally',
+    'after p as P {x > 0}',
+    'until q {x > 0}',
+    'after p as P {x > 0} until q {x > @P.x}',
+)
+
 def absence_properties():
+    text = 'globally: no b {x > 0}'
+    traces = []
+    # valid
+    traces.append([])
+    traces.append([ new_timer(STATE_ACTIVE) ])
+    traces.append([ new_spam('b', p2d()) ])
+    traces.append([
+        new_spam('b', p2d(x=-1)),
+        new_timer(STATE_ACTIVE),
+        new_spam('b', p2d(x=-2)),
+    ])
+    # invalid
+    traces.append([ new_behaviour(p2d(x=1), STATE_FALSE) ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(STATE_ACTIVE),
+        new_behaviour(p2d(x=1), STATE_FALSE),
+        new_timer(STATE_FALSE),
+        new_spam('b', p2d()),
+    ])
+    yield (text, traces)
 
 def existence_properties():
+    return ()
 
 def precedence_properties():
+    return ()
 
 def response_properties():
+    return ()
 
 def prevention_properties():
+    return ()
 
 def all_types_of_property():
-    for test_case in absence_properties():
-        yield test_case
-    for test_case in existence_properties():
-        yield test_case
-    for test_case in precedence_properties():
-        yield test_case
-    for test_case in response_properties():
-        yield test_case
-    for test_case in prevention_properties():
-        yield test_case
+    # example = text, traces
+    for example in absence_properties():
+        yield example
+    for example in existence_properties():
+        yield example
+    for example in precedence_properties():
+        yield example
+    for example in response_properties():
+        yield example
+    for example in prevention_properties():
+        yield example
 
 
 ###############################################################################
 # Test Loop
 ###############################################################################
 
-class MonitorTester(object):
-    def __init__(self):
+class TestMonitorClasses(unittest.TestCase):
+    #def __init__(self):
+    def setUp(self):
         self._reset()
 
-    def test():
+    def test_examples(self):
         n = 0
         p = property_parser()
         r = TemplateRenderer()
@@ -132,9 +223,9 @@ class MonitorTester(object):
                 n += 1
                 self._update_debug_string(text, trace, n)
                 self._launch(hp, m)
-                for i in range(len(trace)):
-                    time = i + 1
-                    event = trace[i]
+                time = 0
+                for event in trace:
+                    time += 1
                     self._dispatch(m, event, time)
                 self._shutdown(m)
                 self._reset()
@@ -362,3 +453,7 @@ class MonitorTester(object):
             '\n  [HPL]: {}'
             '\n  [Example #{}]: {}'
         ).format(text, n, trace)
+
+
+if __name__ == '__main__':
+    unittest.main()
