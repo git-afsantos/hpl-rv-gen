@@ -24,6 +24,7 @@ from hplrv.rendering import TemplateRenderer
 from .common_data import *
 from .absence_traces import *
 from .existence_traces import *
+from .precedence_traces import *
 
 ###############################################################################
 # Test Case Generation
@@ -50,15 +51,16 @@ def existence_properties():
     yield after_until_some_within()
 
 def precedence_properties():
-    # yield globally_no()
-    # yield globally_no_within()
+    yield globally_requires()
+    yield globally_requires_ref()
+    yield globally_requires_within()
+    yield globally_requires_ref_within()
     # yield after_no()
     # yield after_no_within()
     # yield until_no()
     # yield until_no_within()
     # yield after_until_no()
     # yield after_until_no_within()
-    return ()
 
 def response_properties():
     # yield globally_no()
@@ -289,23 +291,29 @@ class TestMonitorClasses(unittest.TestCase):
     def _dispatch_behaviour(self, m, event, time):
         a = len(self.entered_scope)
         b = len(self.exited_scope)
+        s = m._state
         assert m._state == STATE_ACTIVE, self.debug_string
         consumed = self._dispatch_msg(m, event.topic, event.msg, time)
         self._update_debug_string(m, time)
         assert consumed, self.debug_string
         assert len(self.entered_scope) == a, self.debug_string
         assert len(self.exited_scope) == b, self.debug_string
+        if event.state is None:
+            assert m._state == s, self.debug_string
         self._check_verdict(m, event, time)
 
     def _dispatch_trigger(self, m, event, time):
         a = len(self.entered_scope)
         b = len(self.exited_scope)
         k = -1 if not hasattr(m, '_pool') else len(m._pool)
+        s = m._state
         consumed = self._dispatch_msg(m, event.topic, event.msg, time)
         self._update_debug_string(m, time)
         assert consumed, self.debug_string
         assert len(self.entered_scope) == a, self.debug_string
         assert len(self.exited_scope) == b, self.debug_string
+        if event.state is None:
+            assert m._state == s, self.debug_string
         self._check_verdict(m, event, time)
         if k >= 0:
             assert len(m._pool) >= k, self.debug_string
@@ -360,7 +368,8 @@ class TestMonitorClasses(unittest.TestCase):
             pass # expected
 
     def _check_verdict(self, m, event, time):
-        assert m._state == event.state, self.debug_string
+        if event.state is not None:
+            assert m._state == event.state, self.debug_string
         if event.state == STATE_TRUE:
             assert len(self.found_success) == 1, self.debug_string
             assert self.found_success[0][0] == time, self.debug_string
