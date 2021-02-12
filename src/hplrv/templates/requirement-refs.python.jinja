@@ -69,13 +69,13 @@ for rec in self._pool:
 {% macro _drop_if(phi) -%}
 {% if phi.is_vacuous -%}
     {% if phi.is_true -%}
-return True
+return False
     {%- else -%}
 pass # predicate is always False
     {%- endif %}
 {%- else -%}
 if {{ P.inline_predicate(phi, 'msg') }}:
-    return True
+    return False
 {%- endif %}
 {%- endmacro %}
 
