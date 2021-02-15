@@ -239,12 +239,359 @@ RESPONSE_EXAMPLES = [
 PREVENTION_EXAMPLES = [p.replace('causes', 'forbids') for p in RESPONSE_EXAMPLES]
 
 
+AGROB_EXAMPLES = [
+'''
+# id: unused_topics
+# title: "Unused topics"
+# description: "No messages should be published on these topics."
+globally:
+    no (
+        /debug_pose_array
+        or
+        /Agrob_path/plan_local
+        or
+        /TrajectoryControlCommand
+    )
+''',
+
+'''
+# id: valid_states
+# title: "Valid States"
+# description: "Enumeration of all valid states in /Agrob_path/agrob_pp/state."
+globally:
+    no /Agrob_path/agrob_pp/state {
+        not data in {
+            "WAITING_FOR_MAP", "LOADING_MAP", "READY_TO_PLAN", "PLANNING",
+            "PLANNING_SUCCESSFUL", "PLANNING_FAILED", "OFFLINE_DOCK_PLAN_MODE"
+        }
+    }
+''',
+
+'''
+# id: valid_initial_poses
+# title: "Valid Initial Poses"
+# description: "Conditions that apply to all valid initial poses."
+after /map as M:
+    no /Agrob_path/initialPose {
+        ( not pose.pose.position.x in
+            ![@M.origin.x to (@M.width * @M.resolution + @M.origin.x)]! )
+        or
+        ( not pose.pose.position.y in
+            ![@M.origin.y to (@M.height * @M.resolution + @M.origin.y)]! )
+        or
+        ( @M.data[(pose.pose.position.y + @M.origin.y) * @M.width
+                  + (pose.pose.position.x + @M.origin.x)] != 0 )
+    }
+''',
+
+'''
+# id: valid_goal_poses
+# title: "Valid Goal Poses"
+# description: "Conditions that apply to all valid goal poses."
+after /map as M:
+    no /Agrob_path/goalPose {
+        ( not pose.position.x in
+            ![@M.origin.x to (@M.width * @M.resolution + @M.origin.x)]! )
+        or
+        ( not pose.position.y in
+            ![@M.origin.y to (@M.height * @M.resolution + @M.origin.y)]! )
+        or
+        ( @M.data[(pose.position.y + @M.origin.y) * @M.width
+                  + (pose.position.x + @M.origin.x)] != 0 )
+    }
+''',
+
+'''
+# id: valid_plan_pub_positions
+# title: "Valid Positions in Plans"
+# description: "Conditions that apply to all positions of published plans."
+after /map as M:
+    no /Agrob_path/plan_pub {
+        exists i in poses: (
+            ( not poses[@i].pose.position.x in
+                ![@M.origin.x to (@M.width * @M.resolution + @M.origin.x)]! )
+            or
+            ( not poses[@i].pose.position.y in
+                ![@M.origin.y to (@M.height * @M.resolution + @M.origin.y)]! )
+            or
+            ( @M.data[(poses[@i].pose.position.y + @M.origin.y) * @M.width
+                      + (poses[@i].pose.position.x + @M.origin.x)] != 0 )
+        )
+    }
+''',
+
+'''
+# id: valid_plan_pub_distance
+# title: "Valid Distances in Plans"
+# description: "FIXME Between two consecutive poses, the distance should not exceed 3 times the map's resolution."
+after /map as M:
+    no /Agrob_path/plan_pub {
+        exists i in [0 to (len(poses) - 2)]: (
+            ( not abs(poses[@i].pose.position.x - poses[@i+1].pose.position.x)
+                in [(2 * @M.resolution) to (3 * @M.resolution)] )
+            or
+            ( not abs(poses[@i].pose.position.y - poses[@i+1].pose.position.y)
+                in [(2 * @M.resolution) to (3 * @M.resolution)] )
+        )
+    }
+''',
+
+# TODO: "Entre duas poses consecutivas de /Agrob_path/plan_pub, a diferença das orientações não deve ser diferente de 22.5º"
+
+'''
+# id: valid_cell_markers
+# title: "Valid Cell Markers"
+# description: "[Type Invariant] Only valid cell markers are produced."
+globally:
+    no /Agrob_path/cells_marker_array {
+        exists i in markers: (
+            (not markers[@i].type in [0 to 11])
+            or
+            (not markers[@i].action in {0, 2, 3})
+            or
+            (markers[@i].text != "" and markers[@i].type != 9)
+            or
+            (markers[@i].mesh_resource != "" and markers[@i].type != 10)
+            or
+            (markers[@i].mesh_use_embedded_materials and markers[@i].type != 10)
+        )
+    }
+''',
+
+'''
+# id: initial_state
+# title: "Initial State"
+# description: "WAITING_FOR_MAP is the initial state."
+until /Agrob_path/agrob_pp/state { data = "WAITING_FOR_MAP" }:
+    no /Agrob_path/agrob_pp/state
+''',
+
+'''
+# id: goto_waiting_for_map
+# title: "WAITING_FOR_MAP is Reachable"
+# description: "The WAITING_FOR_MAP state is eventually reached."
+globally:
+    some /Agrob_path/agrob_pp/state { data = "WAITING_FOR_MAP" }
+    within 10 s
+''',
+
+'''
+# id: until_map
+# title: "No Plan Without a Map"
+# description: "Cannot start planning until a map is published."
+until /map:
+    no (
+        /Agrob_path/agrob_pp/state { data != "WAITING_FOR_MAP" }
+        or
+        /Agrob_path/plan_pub
+        or
+        /Paramatric_Path
+        or
+        /Path
+        or
+        /inflation_cloud
+    )
+''',
+
+'''
+# id: some_map
+# title: "There is a Map"
+# description: "Eventually a map is published."
+globally: some /map within 300 s
+''',
+
+'''
+# id: goto_loading_map
+# title: "LOADING_MAP is Reachable"
+# description: "After receiving a map it enters the LOADING_MAP state."
+after /map:
+    some /Agrob_path/agrob_pp/state { data = "LOADING_MAP" }
+    within 10 s
+''',
+
+'''
+# id: second_state
+# title: "Second State"
+# description: "LOADING_MAP is the second state."
+until /Agrob_path/agrob_pp/state { data = "LOADING_MAP" }:
+    no /Agrob_path/agrob_pp/state { data != "WAITING_FOR_MAP" }
+''',
+
+'''
+# id: goto_ready_to_plan
+# title: "READY_TO_PLAN is Reachable"
+# description: "After loading the map it enters the READY_TO_PLAN state."
+after /Agrob_path/agrob_pp/state { data = "LOADING_MAP" }:
+    some /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }
+    within 240 s
+''',
+
+'''
+# id: third_state
+# title: "Third State"
+# description: "READY_TO_PLAN is the third state."
+until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
+    no /Agrob_path/agrob_pp/state {
+        not data in {"WAITING_FOR_MAP", "LOADING_MAP"}
+    }
+''',
+
+'''
+# id: planning_loop
+# title: "Planning Loop"
+# description: "READY_TO_PLAN starts the planning loop."
+after /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
+    no /Agrob_path/agrob_pp/state {
+        not data in {
+            "READY_TO_PLAN", "PLANNING",
+            "PLANNING_SUCCESSFUL", "PLANNING_FAILED"
+        }
+    }
+''',
+
+'''
+# id: planning_after_ready
+# title: "Only PLANNING After READY_TO_PLAN"
+# description: "PLANNING is the state following READY_TO_PLAN."
+after /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }
+until /Agrob_path/agrob_pp/state { data = "PLANNING" }:
+    no /Agrob_path/agrob_pp/state
+''',
+
+'''
+# id: result_after_planning
+# title: "Only Success or Failure After PLANNING"
+# description: "PLANNING_SUCCESSFUL or PLANNING_FAILED are the two possible states following PLANNING."
+after /Agrob_path/agrob_pp/state { data = "PLANNING" }
+until /Agrob_path/agrob_pp/state {
+    data = "PLANNING_SUCCESSFUL" or data = "PLANNING_FAILED"
+}:
+    no /Agrob_path/agrob_pp/state
+''',
+
+'''
+# id: ready_after_result
+# title: "Only READY_TO_PLAN After Success or Failure"
+# description: "PLANNING_SUCCESSFUL or PLANNING_FAILED can only go back to READY_TO_PLAN."
+after /Agrob_path/agrob_pp/state {
+    data = "PLANNING_SUCCESSFUL" or data = "PLANNING_FAILED"
+}
+until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
+    no /Agrob_path/agrob_pp/state
+''',
+
+'''
+# id: some_goal
+# title: "There is a Goal Pose"
+# description: "When READY_TO_PLAN, eventually a goal pose is published."
+after /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }
+until /Agrob_path/agrob_pp/state { data = "PLANNING" }:
+    some /Agrob_path/goalPose
+    within 400 ms
+''',
+
+'''
+# id: some_pose
+# title: "There is an Initial Pose"
+# description: "When READY_TO_PLAN, eventually an initial pose is published."
+after /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }
+until /Agrob_path/agrob_pp/state { data = "PLANNING" }:
+    some /Agrob_path/initialPose
+    within 400 ms
+''',
+
+'''
+# id: planning_requires_goal
+# title: "PLANNING Requires a Goal Pose"
+# description: "No transition to PLANNING before publishing a goal pose."
+after /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }
+until /Agrob_path/agrob_pp/state {
+    data = "PLANNING_SUCCESSFUL" or data = "PLANNING_FAILED"
+}:
+    /Agrob_path/agrob_pp/state { data = "PLANNING" }
+    requires /Agrob_path/goalPose
+''',
+
+'''
+# id: planning_requires_pose
+# title: "PLANNING Requires an Initial Pose"
+# description: "No transition to PLANNING before publishing an initial pose."
+after /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }
+until /Agrob_path/agrob_pp/state {
+    data = "PLANNING_SUCCESSFUL" or data = "PLANNING_FAILED"
+}:
+    /Agrob_path/agrob_pp/state { data = "PLANNING" }
+    requires /Agrob_path/initialPose
+''',
+
+'''
+# id: goto_planning
+# title: "Poses Lead To PLANNING"
+# description: "A goal pose eventually leads to a transition to PLANNING."
+after /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }
+until /Agrob_path/agrob_pp/state {
+    data = "PLANNING_SUCCESSFUL" or data = "PLANNING_FAILED"
+}:
+    /Agrob_path/goalPose
+    causes /Agrob_path/agrob_pp/state { data = "PLANNING" }
+    within 1 s
+''',
+
+'''
+# id: spurious_plans
+# title: "No Plans Before PLANNING"
+# description: "No plans are published before the first PLANNING state."
+until /Agrob_path/agrob_pp/state { data = "PLANNING" }:
+    no (
+        /Agrob_path/plan_pub
+        or
+        /Paramatric_Path
+        or
+        /Path
+    )
+''',
+
+'''
+# id: plan_requires_success
+# title: "Plan Requires PLANNING_SUCCESSFUL"
+# description: "Cannot publish a plan without visiting PLANNING_SUCCESSFUL."
+after /Agrob_path/agrob_pp/state { data = "PLANNING" }
+until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
+    /Agrob_path/plan_pub
+    requires /Agrob_path/agrob_pp/state { data = "PLANNING_SUCCESSFUL" }
+''',
+
+'''
+# id: goto_success_or_failure
+# title: "PLANNING_SUCCESSFUL or PLANNING_FAILED are Reachable"
+# description: "A transition from PLANNING to PLANNING_SUCCESSFUL or PLANNING_FAILED eventually happens."
+after /Agrob_path/agrob_pp/state { data = "PLANNING" }
+until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
+    some /Agrob_path/agrob_pp/state {
+        data = "PLANNING_SUCCESSFUL" or data = "PLANNING_FAILED"
+    }
+    within 60 s
+''',
+
+'''
+# id: success_plan
+# title: "PLANNING_SUCCESSFUL Produces a Plan"
+# description: "Entering the PLANNING_SUCCESSFUL state leads to the publication of a plan."
+after /Agrob_path/agrob_pp/state { data = "PLANNING" }
+until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
+    /Agrob_path/agrob_pp/state { data = "PLANNING_SUCCESSFUL" }
+    causes /Agrob_path/plan_pub
+    within 1 s
+''',
+]
+
+
 def test_me():
     from hpl.parser import property_parser
     p = property_parser()
     r = TemplateRenderer()
     outputs = []
-    for text in PREVENTION_EXAMPLES:
+    for text in AGROB_EXAMPLES:
         hpl_property = p.parse(text)
         code = r.render_monitor(hpl_property)
         outputs.append(code)
