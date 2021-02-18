@@ -53,6 +53,7 @@ class {{ sm.class_name }}(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = '{{ sm.property_id }}'
@@ -68,6 +69,12 @@ class {{ sm.class_name }}(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = {{ STATE_OFF }}
+        self.cb_map = {
+            {# -#}
+        {% for topic in sm.on_msg %}
+            '{{ topic }}': self.on_msg_{{ topic|replace('/', '_') }},
+        {% endfor %}
+        }
 
     @property
     def verdict(self):

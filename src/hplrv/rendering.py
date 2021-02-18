@@ -34,7 +34,7 @@ class TemplateRenderer(object):
             autoescape=False
         )
 
-    def render_monitor(self, hpl_property):
+    def render_monitor(self, hpl_property, id_as_class=True):
         if hpl_property.pattern.is_absence:
             builder = AbsenceBuilder(hpl_property)
             template_file = 'absence.python.jinja'
@@ -55,6 +55,10 @@ class TemplateRenderer(object):
             template_file = 'prevention.python.jinja'
         else:
             raise ValueError('unknown pattern: ' + str(hpl_property.pattern))
+        if id_as_class:
+            name = hpl_property.metadata.get('id', 'Property')
+            name = ''.join(word.title() for word in name.split("_") if word)
+            builder.class_name = name + 'Monitor'
         data = {'state_machine': builder}
         return self._render_template(template_file, data)
 
