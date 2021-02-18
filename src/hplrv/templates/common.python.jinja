@@ -145,8 +145,8 @@ class {{ sm.class_name }}(object):
 {# COMMON EVENTS #}
 {##############################################################################}
 
-{% macro activator_event(event, topic) -%}
-    {% call change_to_state_if(event.predicate, STATE_ACTIVE, enters_scope=true) %}
+{% macro activator_event(event, topic, s=STATE_ACTIVE) -%}
+    {% call change_to_state_if(event.predicate, s, enters_scope=true) %}
 self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
     {%- endcall %}
 {%- endmacro %}

@@ -26,7 +26,7 @@ if self._state == {{ G.STATE_ACTIVE }}:
 {% macro _on_msg(sm, event, topic, from_state) -%}
 {% if event.event_type == G.EVENT_ACTIVATOR %}
 {# after or after-until -#}
-{{ G.activator_event(event, topic) }}
+{{ G.activator_event(event, topic, s=G.STATE_SAFE) }}
 {%- elif event.event_type == G.EVENT_TERMINATOR %}
 {# until or after-until -#}
 {{ G.terminator_event(sm, event, topic) }}
