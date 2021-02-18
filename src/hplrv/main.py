@@ -336,7 +336,20 @@ after /map as M:
     }
 ''',
 
-# TODO: "Entre duas poses consecutivas de /Agrob_path/plan_pub, a diferença das orientações não deve ser diferente de 22.5º"
+'''
+# id: valid_plan_pub_angles
+# title: "Valid Orientations in Plans"
+# description: "Between two consecutive poses, the difference of orientations should not exceed 22.5 degrees."
+globally:
+    no /Agrob_path/plan_pub {
+        exists i in [0 to (len(poses) - 2)]: (
+            deg(abs(
+                yaw(poses[@i+1].pose.orientation)
+                - yaw(poses[@i].pose.orientation)
+            )) > 22.5
+        )
+    }
+''',
 
 '''
 # id: valid_cell_markers
@@ -582,6 +595,24 @@ until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
     /Agrob_path/agrob_pp/state { data = "PLANNING_SUCCESSFUL" }
     causes /Agrob_path/plan_pub
     within 1 s
+''',
+
+'''
+# id: first_plan
+# title: "First Successful Plan"
+# description: "[Helper] The system produces at least one plan."
+globally:
+    some /Agrob_path/agrob_pp/state { data = "PLANNING_SUCCESSFUL" }
+    within 300 s
+''',
+
+'''
+# id: second_plan
+# title: "Second Successful Plan"
+# description: "[Helper] The system produces a second plan."
+after /Agrob_path/agrob_pp/state { data = "PLANNING_SUCCESSFUL" }:
+    some /Agrob_path/agrob_pp/state { data = "PLANNING_SUCCESSFUL" }
+    within 300 s
 ''',
 ]
 
