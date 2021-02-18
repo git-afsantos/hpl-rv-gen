@@ -246,8 +246,6 @@ AGROB_EXAMPLES = [
 # description: "No messages should be published on these topics."
 globally:
     no (
-        /debug_pose_array
-        or
         /Agrob_path/plan_local
         or
         /TrajectoryControlCommand
@@ -273,14 +271,16 @@ globally:
 # description: "Conditions that apply to all valid initial poses."
 after /map as M:
     no /Agrob_path/initialPose {
-        ( not pose.pose.position.x in
-            ![@M.origin.x to (@M.width * @M.resolution + @M.origin.x)]! )
+        ( pose.pose.position.x < @M.info.origin.position.x )
         or
-        ( not pose.pose.position.y in
-            ![@M.origin.y to (@M.height * @M.resolution + @M.origin.y)]! )
+        ( pose.pose.position.x > (@M.info.width * @M.info.resolution + @M.info.origin.position.x) )
         or
-        ( @M.data[(pose.pose.position.y + @M.origin.y) * @M.width
-                  + (pose.pose.position.x + @M.origin.x)] != 0 )
+        ( pose.pose.position.y < @M.info.origin.position.y )
+        or
+        ( pose.pose.position.y > (@M.info.height * @M.info.resolution + @M.info.origin.position.y) )
+        or
+        ( @M.data[int((pose.pose.position.y + @M.info.origin.position.y) * @M.info.width
+                  + (pose.pose.position.x + @M.info.origin.position.x))] != 0 )
     }
 ''',
 
@@ -290,14 +290,16 @@ after /map as M:
 # description: "Conditions that apply to all valid goal poses."
 after /map as M:
     no /Agrob_path/goalPose {
-        ( not pose.position.x in
-            ![@M.origin.x to (@M.width * @M.resolution + @M.origin.x)]! )
+        ( pose.position.x < @M.info.origin.position.x )
         or
-        ( not pose.position.y in
-            ![@M.origin.y to (@M.height * @M.resolution + @M.origin.y)]! )
+        ( pose.position.x > (@M.info.width * @M.info.resolution + @M.info.origin.position.x) )
         or
-        ( @M.data[(pose.position.y + @M.origin.y) * @M.width
-                  + (pose.position.x + @M.origin.x)] != 0 )
+        ( pose.position.y < @M.info.origin.position.y )
+        or
+        ( pose.position.y > (@M.info.height * @M.info.resolution + @M.info.origin.position.y) )
+        or
+        ( @M.data[int((pose.position.y + @M.info.origin.position.y) * @M.info.width
+                  + (pose.position.x + @M.info.origin.position.x))] != 0 )
     }
 ''',
 
@@ -308,14 +310,16 @@ after /map as M:
 after /map as M:
     no /Agrob_path/plan_pub {
         exists i in poses: (
-            ( not poses[@i].pose.position.x in
-                ![@M.origin.x to (@M.width * @M.resolution + @M.origin.x)]! )
+            ( poses[@i].pose.position.x < @M.info.origin.position.x )
             or
-            ( not poses[@i].pose.position.y in
-                ![@M.origin.y to (@M.height * @M.resolution + @M.origin.y)]! )
+            ( poses[@i].pose.position.x > (@M.info.width * @M.info.resolution + @M.info.origin.position.x) )
             or
-            ( @M.data[(poses[@i].pose.position.y + @M.origin.y) * @M.width
-                      + (poses[@i].pose.position.x + @M.origin.x)] != 0 )
+            ( poses[@i].pose.position.y < @M.info.origin.position.y )
+            or
+            ( poses[@i].pose.position.y > (@M.info.height * @M.info.resolution + @M.info.origin.position.y) )
+            or
+            ( @M.data[int((poses[@i].pose.position.y + @M.info.origin.position.y) * @M.info.width
+                      + (poses[@i].pose.position.x + @M.info.origin.position.x))] != 0 )
         )
     }
 ''',
@@ -327,11 +331,17 @@ after /map as M:
 after /map as M:
     no /Agrob_path/plan_pub {
         exists i in [0 to (len(poses) - 2)]: (
-            ( not abs(poses[@i].pose.position.x - poses[@i+1].pose.position.x)
-                in [(2 * @M.resolution) to (3 * @M.resolution)] )
+            ( abs(poses[@i].pose.position.x - poses[@i+1].pose.position.x)
+                < (2 * @M.info.resolution) )
             or
-            ( not abs(poses[@i].pose.position.y - poses[@i+1].pose.position.y)
-                in [(2 * @M.resolution) to (3 * @M.resolution)] )
+            ( abs(poses[@i].pose.position.x - poses[@i+1].pose.position.x)
+                > (3 * @M.info.resolution) )
+            or
+            ( abs(poses[@i].pose.position.y - poses[@i+1].pose.position.y)
+                < (2 * @M.info.resolution) )
+            or
+            ( abs(poses[@i].pose.position.y - poses[@i+1].pose.position.y)
+                > (3 * @M.info.resolution) )
         )
     }
 ''',
