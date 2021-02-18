@@ -510,7 +510,6 @@ until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
 after /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }
 until /Agrob_path/agrob_pp/state { data = "PLANNING" }:
     some /Agrob_path/goalPose
-    within 400 ms
 ''',
 
 '''
@@ -520,7 +519,6 @@ until /Agrob_path/agrob_pp/state { data = "PLANNING" }:
 after /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }
 until /Agrob_path/agrob_pp/state { data = "PLANNING" }:
     some /Agrob_path/initialPose
-    within 400 ms
 ''',
 
 '''
