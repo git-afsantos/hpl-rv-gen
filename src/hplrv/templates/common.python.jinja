@@ -163,7 +163,7 @@ self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
         {%- endcall %}
     {% elif event.verdict == false %}
         {% call change_to_state_if(event.predicate, STATE_FALSE, exits_scope=true) %}
-{{ clear_pool(sm) }}
+{{ pool_to_witness(sm) }}
 self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
         {%- endcall %}
     {% else %}
@@ -261,6 +261,15 @@ else:
 
 {% macro clear_pool(sm) -%}
 {% if sm.pool_size != 0 %}
+self._pool.clear()
+{%- else %}
+# there is no record pool to clear
+{%- endif %}
+{%- endmacro %}
+
+{% macro pool_to_witness(sm) -%}
+{% if sm.pool_size != 0 %}
+self.witness.extend(self._pool)
 self._pool.clear()
 {%- else %}
 # there is no record pool to clear
