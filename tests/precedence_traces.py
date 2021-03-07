@@ -349,13 +349,14 @@ def after_requires_ref_within():
 ###############################################################################
 
 def until_requires():
-    text = 'until q {x > 0}: no b {x > 0}'
+    text = 'until q {x > 0}: b {x > 0} requires a {x > 0}'
     traces = []
     # valid
     traces.append([])
     traces.append([ new_timer() ])
     traces.append([ new_spam('b', p2d()) ])
     traces.append([ new_terminator(p2d(x=1), STATE_TRUE) ])
+    traces.append([ new_trigger(p2d(x=1), STATE_TRUE) ])
     traces.append([
         new_spam('b', p2d(x=-1)),
         new_timer(),
@@ -364,8 +365,18 @@ def until_requires():
     traces.append([
         new_spam('b', p2d()),
         new_timer(),
-        new_terminator(p2d(x=1), STATE_TRUE),
+        new_trigger(p2d(x=1), STATE_TRUE),
+        new_spam('a', p2d(x=2)),
         new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+    ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(),
+        new_terminator(p2d(x=1), STATE_TRUE),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
     ])
     # invalid
     traces.append([ new_behaviour(p2d(x=1), STATE_FALSE) ])
@@ -377,7 +388,59 @@ def until_requires():
         new_spam('b', p2d(x=1)),
     ])
     traces.append([
+        new_spam('a', p2d()),
+        new_spam('q', p2d()),
         new_behaviour(p2d(x=1), STATE_FALSE),
+        new_spam('q', p2d(x=1)),
+    ])
+    return (text, traces)
+
+def until_requires_ref():
+    text = 'until q {x > 0}: b as B {x > 0} requires a {x > 0 and x > @B.x}'
+    traces = []
+    # valid
+    traces.append([])
+    traces.append([ new_timer() ])
+    traces.append([ new_spam('b', p2d()) ])
+    traces.append([ new_terminator(p2d(x=1), STATE_TRUE) ])
+    traces.append([ new_trigger(p2d(x=1), None) ])
+    traces.append([
+        new_spam('b', p2d(x=-1)),
+        new_timer(),
+        new_spam('b', p2d(x=-2)),
+    ])
+    traces.append([
+        new_spam('a', p2d()),
+        new_timer(),
+        new_trigger(p2d(x=2), None),
+        new_spam('b', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=1), None),
+        new_spam('b', p2d()),
+        new_terminator(p2d(x=1), STATE_TRUE),
+        new_spam('a', p2d(x=1)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=3)),
+    ])
+    # invalid
+    traces.append([ new_behaviour(p2d(x=1), STATE_FALSE) ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(),
+        new_behaviour(p2d(x=1), STATE_FALSE),
+        new_timer(),
+        new_spam('b', p2d(x=1)),
+    ])
+    traces.append([
+        new_trigger(p2d(x=1), None),
+        new_behaviour(p2d(x=1), STATE_FALSE),
+        new_spam('q', p2d(x=1)),
+    ])
+    traces.append([
+        new_trigger(p2d(x=2), None),
+        new_spam('b', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_behaviour(p2d(x=2), STATE_FALSE),
         new_spam('q', p2d(x=1)),
     ])
     return (text, traces)
@@ -387,35 +450,141 @@ def until_requires():
 ###############################################################################
 
 def until_requires_within():
-    text = 'until q {x > 0}: no b {x > 0} within 3 s'
+    text = 'until q {x > 0}: b {x > 0} requires a {x > 0} within 3 s'
     traces = []
     # valid
     traces.append([])
     traces.append([ new_timer() ])
     traces.append([ new_spam('b', p2d()) ])
     traces.append([ new_terminator(p2d(x=1), STATE_TRUE) ])
+    traces.append([ new_trigger(p2d(x=1), STATE_SAFE) ])
     traces.append([
-        new_spam('b', p2d()),
-        new_spam('b', p2d(x=1), state=STATE_TRUE),
-        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=-1)),
+        new_timer(),
+        new_spam('b', p2d(x=-2)),
     ])
     traces.append([
         new_spam('b', p2d()),
         new_timer(),
         new_terminator(p2d(x=1), STATE_TRUE),
+        new_spam('a', p2d(x=2)),
         new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+    ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(),
+        new_trigger(p2d(x=1), STATE_SAFE),
+        new_trigger(p2d(x=2), None),
+        new_spam('b', p2d(x=2)),
+        new_spam('b', p2d(x=2)),
+        new_timer(state=STATE_ACTIVE),
+        new_terminator(p2d(x=1), STATE_TRUE),
+    ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(),
+        new_trigger(p2d(x=1), STATE_SAFE),
+        new_terminator(p2d(x=1), STATE_TRUE),
+        new_spam('b', p2d(x=2)),
+        new_spam('a', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
     ])
     # invalid
     traces.append([ new_behaviour(p2d(x=1), STATE_FALSE) ])
     traces.append([
         new_spam('b', p2d()),
+        new_timer(),
         new_behaviour(p2d(x=1), STATE_FALSE),
         new_timer(),
         new_spam('b', p2d(x=1)),
     ])
     traces.append([
+        new_trigger(p2d(x=1), STATE_SAFE),
+        new_spam('a', p2d()),
+        new_spam('q', p2d()),
         new_behaviour(p2d(x=1), STATE_FALSE),
         new_spam('q', p2d(x=1)),
+    ])
+    traces.append([
+        new_trigger(p2d(x=1), STATE_SAFE),
+        new_trigger(p2d(x=2), None),
+        new_spam('b', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_behaviour(p2d(x=1), STATE_FALSE),
+    ])
+    return (text, traces)
+
+def until_requires_ref_within():
+    text = 'until q {x > 0}: b as B {x > 0} requires a {x > 0 and x > @B.x} within 3 s'
+    traces = []
+    # valid
+    traces.append([])
+    traces.append([ new_timer() ])
+    traces.append([ new_spam('b', p2d()) ])
+    traces.append([ new_terminator(p2d(x=1), STATE_TRUE) ])
+    traces.append([ new_trigger(p2d(x=1), None) ])
+    traces.append([
+        new_spam('b', p2d(x=-1)),
+        new_timer(),
+        new_spam('b', p2d(x=-2)),
+    ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(),
+        new_terminator(p2d(x=1), STATE_TRUE),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+    ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(),
+        new_trigger(p2d(x=1), None),
+        new_trigger(p2d(x=2), None),
+        new_spam('b', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_timer(),
+        new_terminator(p2d(x=1), STATE_TRUE),
+    ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(),
+        new_trigger(p2d(x=1), None),
+        new_terminator(p2d(x=1), STATE_TRUE),
+        new_spam('b', p2d(x=2)),
+        new_spam('a', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+    ])
+    # invalid
+    traces.append([ new_behaviour(p2d(x=1), STATE_FALSE) ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(),
+        new_behaviour(p2d(x=1), STATE_FALSE),
+        new_timer(),
+        new_spam('b', p2d(x=1)),
+    ])
+    traces.append([
+        new_trigger(p2d(x=1), None),
+        new_spam('a', p2d()),
+        new_spam('q', p2d()),
+        new_behaviour(p2d(x=1), STATE_FALSE),
+        new_spam('q', p2d(x=1)),
+    ])
+    traces.append([
+        new_trigger(p2d(x=2), None),
+        new_trigger(p2d(x=1), None),
+        new_spam('b', p2d(x=1)),
+        new_behaviour(p2d(x=1), STATE_FALSE),
+        new_spam('b', p2d(x=1)),
+    ])
+    traces.append([
+        new_trigger(p2d(x=1), None),
+        new_trigger(p2d(x=2), None),
+        new_spam('b', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_behaviour(p2d(x=1), STATE_FALSE),
     ])
     return (text, traces)
 
@@ -424,23 +593,23 @@ def until_requires_within():
 ###############################################################################
 
 def after_until_requires():
-    text = 'after p as P {x + y > 0} until q {x > @P.x}: no b {x > @P.x}'
+    text = 'after p as P {x > 0} until q {x > @P.x}: b {x > @P.x} requires a {x > @P.x}'
     traces = []
     # valid
     traces.append([])
     traces.append([ new_timer() ])
     traces.append([ new_spam('b', p2d()) ])
-    traces.append([ new_activator(p2d(x=-2, y=3), STATE_ACTIVE) ])
+    traces.append([ new_activator(p2d(x=1), STATE_ACTIVE) ])
     traces.append([
-        new_spam('b', p2d()),
+        new_spam('b', p2d(x=1)),
         new_activator(p2d(x=1), STATE_ACTIVE),
         new_timer(),
         new_spam('b', p2d(x=1)),
     ])
     traces.append([
         new_spam('p', p2d()),
-        new_spam('q', p2d()),
-        new_spam('b', p2d()),
+        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
         new_activator(p2d(x=1), STATE_ACTIVE),
         new_spam('b', p2d(x=1)),
         new_spam('q', p2d(x=1)),
@@ -451,6 +620,28 @@ def after_until_requires():
         new_spam('b', p2d(x=2)),
         new_spam('q', p2d(x=2)),
         new_terminator(p2d(x=3), STATE_INACTIVE),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=2), STATE_SAFE),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=2), STATE_SAFE),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
     ])
     # invalid
     traces.append([
@@ -464,12 +655,60 @@ def after_until_requires():
         new_spam('b', p2d(x=1)),
         new_behaviour(p2d(x=2), STATE_FALSE),
         new_timer(),
-        new_spam('b', p2d(x=1)),
+        new_spam('b', p2d(x=3)),
     ])
     traces.append([
         new_spam('p', p2d()),
         new_spam('q', p2d()),
+        new_spam('a', p2d()),
         new_spam('b', p2d()),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('a', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+        new_activator(p2d(x=2), STATE_ACTIVE),
+        new_behaviour(p2d(x=3), STATE_FALSE),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+    ])
+    traces.append([
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_trigger(p2d(x=2), STATE_SAFE),
+        new_spam('b', p2d(x=3)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=2)),
+        new_activator(p2d(x=2), STATE_ACTIVE),
+        new_behaviour(p2d(x=3), STATE_FALSE),
+        new_spam('a', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+    ])
+    return (text, traces)
+
+def after_until_requires_ref():
+    text = 'after p as P {x > 0} until q {x > @P.x}: b as B {x > @P.x} requires a {x > @P.x and x > @B.x}'
+    traces = []
+    # valid
+    traces.append([])
+    traces.append([ new_timer() ])
+    traces.append([ new_spam('b', p2d()) ])
+    traces.append([ new_activator(p2d(x=1), STATE_ACTIVE) ])
+    traces.append([
+        new_spam('b', p2d(x=1)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_timer(),
+        new_spam('b', p2d(x=1)),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
         new_activator(p2d(x=1), STATE_ACTIVE),
         new_spam('b', p2d(x=1)),
         new_spam('q', p2d(x=1)),
@@ -477,7 +716,77 @@ def after_until_requires():
         new_spam('b', p2d(x=2)),
         new_spam('q', p2d(x=2)),
         new_activator(p2d(x=2), STATE_ACTIVE),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+        new_terminator(p2d(x=3), STATE_INACTIVE),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=2), None),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=2), None),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+    ])
+    # invalid
+    traces.append([
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_behaviour(p2d(x=2), STATE_FALSE)
+    ])
+    traces.append([
+        new_spam('b', p2d()),
+        new_timer(),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_behaviour(p2d(x=2), STATE_FALSE),
+        new_timer(),
+        new_spam('b', p2d(x=3)),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d()),
+        new_spam('a', p2d()),
+        new_spam('b', p2d()),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('a', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+        new_activator(p2d(x=2), STATE_ACTIVE),
         new_behaviour(p2d(x=3), STATE_FALSE),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+    ])
+    traces.append([
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=2)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=2)),
+        new_activator(p2d(x=2), STATE_ACTIVE),
+        new_trigger(p2d(x=3), None),
+        new_trigger(p2d(x=4), None),
+        new_behaviour(p2d(x=4), STATE_FALSE),
+        new_spam('a', p2d(x=3)),
         new_spam('b', p2d(x=3)),
         new_spam('q', p2d(x=3)),
     ])
@@ -488,20 +797,18 @@ def after_until_requires():
 ###############################################################################
 
 def after_until_requires_within():
-    text = 'after p as P {x + y > 0} until q {x > @P.x}: no b {x > @P.x} within 3 s'
+    text = 'after p as P {x > 0} until q {x > @P.x}: b {x > @P.x} requires a {x > @P.x} within 3 s'
     traces = []
     # valid
     traces.append([])
     traces.append([ new_timer() ])
     traces.append([ new_spam('b', p2d()) ])
-    traces.append([ new_activator(p2d(x=-2, y=3), STATE_ACTIVE) ])
+    traces.append([ new_activator(p2d(x=1), STATE_ACTIVE) ])
     traces.append([
-        new_spam('b', p2d()),
+        new_spam('b', p2d(x=1)),
         new_activator(p2d(x=1), STATE_ACTIVE),
         new_timer(),
         new_spam('b', p2d(x=1)),
-        new_timer(state=STATE_SAFE),
-        new_spam('b', p2d(x=2)),
     ])
     traces.append([
         new_spam('p', p2d()),
@@ -516,8 +823,31 @@ def after_until_requires_within():
         new_activator(p2d(x=2), STATE_ACTIVE),
         new_spam('b', p2d(x=2)),
         new_spam('q', p2d(x=2)),
-        new_timer(state=STATE_SAFE),
         new_terminator(p2d(x=3), STATE_INACTIVE),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=2), STATE_SAFE),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=1), state=STATE_ACTIVE),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=2), STATE_SAFE),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_timer(state=STATE_ACTIVE),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
     ])
     # invalid
     traces.append([
@@ -525,18 +855,75 @@ def after_until_requires_within():
         new_behaviour(p2d(x=2), STATE_FALSE)
     ])
     traces.append([
-        new_spam('b', p2d()),
+        new_spam('b', p2d(x=2)),
         new_timer(),
         new_activator(p2d(x=1), STATE_ACTIVE),
         new_spam('b', p2d(x=1)),
         new_behaviour(p2d(x=2), STATE_FALSE),
         new_timer(),
+        new_spam('b', p2d(x=3)),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d(x=2)),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=2)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('a', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+        new_activator(p2d(x=2), STATE_ACTIVE),
+        new_behaviour(p2d(x=3), STATE_FALSE),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+    ])
+    traces.append([
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_trigger(p2d(x=2), STATE_SAFE),
+        new_spam('b', p2d(x=3)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_trigger(p2d(x=2), STATE_SAFE),
+        new_spam('b', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_timer(state=STATE_ACTIVE),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=2)),
+        new_activator(p2d(x=2), STATE_ACTIVE),
+        new_trigger(p2d(x=4), STATE_SAFE),
+        new_spam('b', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_behaviour(p2d(x=3), STATE_FALSE),
+        new_spam('a', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+    ])
+    return (text, traces)
+
+def after_until_requires_ref_within():
+    text = 'after p as P {x > 0} until q {x > @P.x}: b as B {x > @P.x} requires a {x > @P.x and x > @B.x} within 3 s'
+    traces = []
+    # valid
+    traces.append([])
+    traces.append([ new_timer() ])
+    traces.append([ new_spam('b', p2d()) ])
+    traces.append([ new_activator(p2d(x=1), STATE_ACTIVE) ])
+    traces.append([
+        new_spam('b', p2d(x=1)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_timer(),
         new_spam('b', p2d(x=1)),
     ])
     traces.append([
         new_spam('p', p2d()),
-        new_spam('q', p2d()),
-        new_spam('b', p2d()),
+        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
         new_activator(p2d(x=1), STATE_ACTIVE),
         new_spam('b', p2d(x=1)),
         new_spam('q', p2d(x=1)),
@@ -544,8 +931,111 @@ def after_until_requires_within():
         new_spam('b', p2d(x=2)),
         new_spam('q', p2d(x=2)),
         new_activator(p2d(x=2), STATE_ACTIVE),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+        new_terminator(p2d(x=3), STATE_INACTIVE),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=4), None),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=3)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=4), None),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=3)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+    ])
+    # invalid
+    traces.append([
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_behaviour(p2d(x=2), STATE_FALSE)
+    ])
+    traces.append([
+        new_spam('b', p2d(x=2)),
+        new_timer(),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_behaviour(p2d(x=2), STATE_FALSE),
+        new_timer(),
+        new_spam('b', p2d(x=3)),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d(x=2)),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=2)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('a', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=2)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=2)),
+        new_activator(p2d(x=2), STATE_ACTIVE),
         new_behaviour(p2d(x=3), STATE_FALSE),
         new_spam('b', p2d(x=3)),
         new_spam('q', p2d(x=3)),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=4), None),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=3)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=4), None),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=3)),
+        new_spam('b', p2d(x=2)),
+        new_behaviour(p2d(x=3), STATE_FALSE),
+        new_spam('q', p2d(x=2)),
+    ])
+    traces.append([
+        new_spam('p', p2d()),
+        new_spam('q', p2d(x=1)),
+        new_spam('b', p2d(x=1)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=4), None),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=3)),
+        new_spam('b', p2d(x=2)),
+        new_spam('q', p2d(x=1)),
+        new_terminator(p2d(x=2), STATE_INACTIVE),
+        new_spam('a', p2d(x=3)),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=3)),
+        new_activator(p2d(x=1), STATE_ACTIVE),
+        new_spam('b', p2d(x=1)),
+        new_trigger(p2d(x=3), None),
+        new_spam('b', p2d(x=2)),
+        new_behaviour(p2d(x=3), STATE_FALSE),
+        new_spam('b', p2d(x=3)),
+        new_spam('q', p2d(x=2)),
     ])
     return (text, traces)

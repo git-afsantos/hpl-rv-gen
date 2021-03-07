@@ -25,6 +25,7 @@ from .common_data import *
 from .absence_traces import *
 from .existence_traces import *
 from .precedence_traces import *
+from .response_traces import *
 
 ###############################################################################
 # Test Case Generation
@@ -57,22 +58,29 @@ def precedence_properties():
     yield globally_requires_ref_within()
     yield after_requires()
     yield after_requires_ref()
-    # yield after_no_within()
-    # yield until_no()
-    # yield until_no_within()
-    # yield after_until_no()
-    # yield after_until_no_within()
+    yield after_requires_within()
+    yield after_requires_ref_within()
+    yield until_requires()
+    yield until_requires_ref()
+    yield until_requires_within()
+    yield until_requires_ref_within()
+    yield after_until_requires()
+    yield after_until_requires_ref()
+    yield after_until_requires_within()
+    yield after_until_requires_ref_within()
 
 def response_properties():
-    # yield globally_no()
-    # yield globally_no_within()
-    # yield after_no()
-    # yield after_no_within()
+    yield globally_causes()
+    yield globally_causes_ref()
+    yield globally_causes_within()
+    yield globally_causes_ref_within()
+    yield after_causes()
+    yield after_causes_ref_within()
     # yield until_no()
     # yield until_no_within()
     # yield after_until_no()
     # yield after_until_no_within()
-    return ()
+    return
 
 def prevention_properties():
     # yield globally_no()
@@ -177,6 +185,10 @@ class TestMonitorClasses(unittest.TestCase):
         r = TemplateRenderer()
         for text, traces in all_types_of_property():
             hp = p.parse(text)
+            self.pool_decay = ((hp.pattern.is_requirement
+                    or hp.pattern.is_response
+                    or hp.pattern.is_prevention)
+                and hp.pattern.has_max_time)
             py = r.render_monitor(hp)
             m = self._make_monitor(py)
             for trace in traces:
@@ -293,7 +305,8 @@ class TestMonitorClasses(unittest.TestCase):
         a = len(self.entered_scope)
         b = len(self.exited_scope)
         s = m._state
-        assert m._state == STATE_ACTIVE, self.debug_string
+        assert m._state == STATE_ACTIVE or m._state == STATE_SAFE, \
+               self.debug_string
         consumed = self._dispatch_msg(m, event.topic, event.msg, time)
         self._update_debug_string(m, time)
         assert consumed, self.debug_string
@@ -334,7 +347,10 @@ class TestMonitorClasses(unittest.TestCase):
         assert not consumed, self.debug_string
         assert len(self.entered_scope) == a, self.debug_string
         assert len(self.exited_scope) == b, self.debug_string
-        assert len(getattr(m, '_pool', ())) == k, self.debug_string
+        if self.pool_decay:
+            assert len(getattr(m, '_pool', ())) <= k, self.debug_string
+        else:
+            assert len(getattr(m, '_pool', ())) == k, self.debug_string
         self._check_automatic_transition(m, event.state, time, s, t)
 
     def _dispatch_msg(self, m, topic, msg, time):
