@@ -136,6 +136,29 @@ class {{ sm.class_name }}(object):
         self.time_shutdown = -1
         self.time_state = -1
 
+{% if sm.pool_size != 0 and sm.pool_size != 1 %}
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
+{% endif %}
+
     def _noop(self, *args):
         pass
 {%- endmacro %}
@@ -250,12 +273,7 @@ if {{ P.inline_predicate(phi, 'msg') }}:
 self._pool.append(MsgRecord('{{ topic }}', stamp, msg))
 {%- else -%}
 rec = MsgRecord('{{ topic }}', stamp, msg)
-for i in range(len(self._pool), 0, -1):
-    if stamp >= self._pool[i-1].timestamp:
-        self._pool.insert(i, rec)
-        break
-else:
-    self._pool.appendleft(rec)
+self._pool_insert(rec)
 {%- endif %}
 {%- endmacro %}
 

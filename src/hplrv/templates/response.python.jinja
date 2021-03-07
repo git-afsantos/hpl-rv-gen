@@ -50,14 +50,25 @@ assert len(self.witness) >= 1, 'missing activator event'
 v_{{ event.activator }} = self.witness[0].msg
     {% endif %}
     {% if event.trigger %}
+        {% if sm.pool_size == 1 %}
+v_{{ event.trigger }} = self._pool[0].msg
+{% call G.do_if(event.predicate) %}
+self._pool.pop()
+{%- endcall %}
+        {%- else -%}
 n = len(self._pool)
-for i in range(n - 1, -1, -1):
-    v_{{ event.trigger }} = self._pool[i].msg
-{{ _drop_if(event.predicate)|indent(4, first=true) -}}
-if not self._pool:
-{{ G.change_to_state(G.STATE_SAFE, returns=false)|indent(4, first=true) -}}
+pool = deque()
+while self._pool:
+    rec = self._pool.popleft()
+    v_{{ event.trigger }} = rec.msg
+    if not ({{ P.inline_predicate(event.predicate, 'msg') }}):
+        pool.append(rec)
+self._pool = pool
+if not pool:
+{{ G.change_to_state(G.STATE_SAFE)|indent(4, first=true) }}
 if len(self._pool) != n:
     return True
+        {%- endif %}
     {%- else %}
         {% call G.change_to_state_if(event.predicate, G.STATE_SAFE) %}
 # all stimuli have their response
@@ -66,11 +77,6 @@ if len(self._pool) != n:
     {%- endif %}
 {%- endmacro %}
 
-{% macro _drop_if(phi) -%}
-    {% call G.do_if(phi, returns=false) %}
-self._pool.pop()
-    {%- endcall %}
-{%- endmacro %}
 
 {% macro _trigger(sm, event, topic, from_state) -%}
     {% if event.activator %}
