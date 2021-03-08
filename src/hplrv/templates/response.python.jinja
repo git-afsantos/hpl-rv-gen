@@ -85,15 +85,20 @@ v_{{ event.activator }} = self.witness[0].msg
     {% endif %}
     {% if from_state == G.STATE_SAFE %}
         {% call G.change_to_state_if(event.predicate, G.STATE_ACTIVE) %}
-{{ G.add_to_pool(sm, topic) }}
-        {%- endcall %}
-    {% elif from_state == G.STATE_ACTIVE %}
-        {% call G.do_if(event.predicate) %}
-{{ G.add_to_pool(sm, topic) }}
             {% if sm.pool_size == 0 %}
 self.witness.append(MsgRecord('{{ topic }}', stamp, msg))
-            {%- endif %}
+            {% else %}
+{{ G.add_to_pool(sm, topic) }}
+            {% endif %}
         {%- endcall %}
+    {% elif from_state == G.STATE_ACTIVE %}
+        {% if sm.pool_size == 0 or sm.pool_size == 1 %}
+return False # nothing to do
+        {% else %}
+            {% call G.do_if(event.predicate) %}
+{{ G.add_to_pool(sm, topic) }}
+            {%- endcall %}
+        {% endif %}
     {% else %}
 assert False, 'unexpected source state: {{ from_state }}'
     {% endif %}
