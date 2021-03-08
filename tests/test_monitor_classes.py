@@ -76,11 +76,14 @@ def response_properties():
     yield globally_causes_ref_within()
     yield after_causes()
     yield after_causes_ref_within()
-    # yield until_no()
-    # yield until_no_within()
-    # yield after_until_no()
-    # yield after_until_no_within()
-    return
+    yield until_causes()
+    yield until_causes_ref()
+    yield until_causes_within()
+    yield until_causes_ref_within()
+    yield after_until_causes()
+    yield after_until_causes_ref()
+    yield after_until_causes_within()
+    yield after_until_causes_ref_within()
 
 def prevention_properties():
     # yield globally_no()
