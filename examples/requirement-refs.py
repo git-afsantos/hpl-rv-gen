@@ -11,6 +11,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -26,6 +27,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -65,7 +70,7 @@ class PropertyMonitor(object):
                 for rec in self._pool:
                     v_1 = rec.msg
                     if (v_1.data < msg.data):
-                        return True
+                        return False
                 self.witness.append(MsgRecord('/b', stamp, msg))
                 self._state = -2
                 self.time_state = stamp
@@ -77,12 +82,7 @@ class PropertyMonitor(object):
         with self._lock:
             if self._state == 2:
                 rec = MsgRecord('/a', stamp, msg)
-                for i in range(len(self._pool), 0, -1):
-                    if stamp >= self._pool[i-1].timestamp:
-                        self._pool.insert(i, rec)
-                        break
-                else:
-                    self._pool.appendleft(rec)
+                self._pool_insert(rec)
                 return True
         return False
 
@@ -92,6 +92,27 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
 
     def _noop(self, *args):
         pass
@@ -109,6 +130,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -124,6 +146,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -171,7 +197,7 @@ class PropertyMonitor(object):
                     for rec in self._pool:
                         v_1 = rec.msg
                         if (v_1.data < msg.data):
-                            return True
+                            return False
                     self.witness.append(MsgRecord('/b', stamp, msg))
                     self._state = -2
                     self.time_state = stamp
@@ -186,12 +212,7 @@ class PropertyMonitor(object):
                     self._pool.popleft()
             if self._state == 2:
                 rec = MsgRecord('/a', stamp, msg)
-                for i in range(len(self._pool), 0, -1):
-                    if stamp >= self._pool[i-1].timestamp:
-                        self._pool.insert(i, rec)
-                        break
-                else:
-                    self._pool.appendleft(rec)
+                self._pool_insert(rec)
                 return True
         return False
 
@@ -201,6 +222,27 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
 
     def _noop(self, *args):
         pass
@@ -218,6 +260,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -233,6 +276,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -273,7 +320,7 @@ class PropertyMonitor(object):
                     for rec in self._pool:
                         v_1 = rec.msg
                         if (v_1.y < msg.y):
-                            return True
+                            return False
                     self.witness.append(MsgRecord('/b', stamp, msg))
                     self._state = -2
                     self.time_state = stamp
@@ -286,12 +333,7 @@ class PropertyMonitor(object):
             if self._state == 2:
                 if (msg.x < 0):
                     rec = MsgRecord('/a', stamp, msg)
-                    for i in range(len(self._pool), 0, -1):
-                        if stamp >= self._pool[i-1].timestamp:
-                            self._pool.insert(i, rec)
-                            break
-                    else:
-                        self._pool.appendleft(rec)
+                    self._pool_insert(rec)
                     return True
         return False
 
@@ -301,6 +343,27 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
 
     def _noop(self, *args):
         pass
@@ -318,6 +381,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -333,6 +397,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -380,7 +448,7 @@ class PropertyMonitor(object):
                     for rec in self._pool:
                         v_1 = rec.msg
                         if all((v_1.array[v_i] < msg.x) for v_i in range(len(v_1.array))):
-                            return True
+                            return False
                     self.witness.append(MsgRecord('/b', stamp, msg))
                     self._state = -2
                     self.time_state = stamp
@@ -396,12 +464,7 @@ class PropertyMonitor(object):
             if self._state == 2:
                 if all((msg.array[v_i] > 0) for v_i in range(len(msg.array))):
                     rec = MsgRecord('/a', stamp, msg)
-                    for i in range(len(self._pool), 0, -1):
-                        if stamp >= self._pool[i-1].timestamp:
-                            self._pool.insert(i, rec)
-                            break
-                    else:
-                        self._pool.appendleft(rec)
+                    self._pool_insert(rec)
                     return True
         return False
 
@@ -411,6 +474,27 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
 
     def _noop(self, *args):
         pass
@@ -428,6 +512,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -443,6 +528,13 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/a2': self.on_msg__a2,
+            '/a1': self.on_msg__a1,
+            '/b': self.on_msg__b,
+            '/q': self.on_msg__q,
+            '/p': self.on_msg__p,
+        }
 
     @property
     def verdict(self):
@@ -486,12 +578,7 @@ class PropertyMonitor(object):
                     self._pool.popleft()
             if self._state == 2:
                 rec = MsgRecord('/a2', stamp, msg)
-                for i in range(len(self._pool), 0, -1):
-                    if stamp >= self._pool[i-1].timestamp:
-                        self._pool.insert(i, rec)
-                        break
-                else:
-                    self._pool.appendleft(rec)
+                self._pool_insert(rec)
                 return True
         return False
 
@@ -503,12 +590,7 @@ class PropertyMonitor(object):
             if self._state == 2:
                 if (not (msg.a < 0)):
                     rec = MsgRecord('/a1', stamp, msg)
-                    for i in range(len(self._pool), 0, -1):
-                        if stamp >= self._pool[i-1].timestamp:
-                            self._pool.insert(i, rec)
-                            break
-                    else:
-                        self._pool.appendleft(rec)
+                    self._pool_insert(rec)
                     return True
         return False
 
@@ -525,10 +607,10 @@ class PropertyMonitor(object):
                         v_1 = rec.msg
                         if rec.topic == '/a2':
                             if (v_1.a in (0, msg.b)):
-                                return True
+                                return False
                         if rec.topic == '/a1':
                             if (not (v_1.a > msg.b)):
-                                return True
+                                return False
                     self.witness.append(MsgRecord('/b', stamp, msg))
                     self._state = -2
                     self.time_state = stamp
@@ -542,10 +624,10 @@ class PropertyMonitor(object):
                 while self._pool and (stamp - self._pool[0].timestamp) >= 0.1:
                     self._pool.popleft()
             if self._state == 2:
-                assert len(self.witness) >= 1, 'missing activator'
+                assert len(self.witness) >= 1, 'missing activator event'
                 v_P = self.witness[0].msg
                 if (msg.x > v_P.x):
-                    self._pool = deque()
+                    self._pool.clear()
                     self.witness = []
                     self._state = 1
                     self.time_state = stamp
@@ -572,6 +654,27 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
 
     def _noop(self, *args):
         pass

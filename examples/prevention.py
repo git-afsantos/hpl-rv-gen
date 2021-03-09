@@ -11,6 +11,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -26,6 +27,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -76,8 +81,8 @@ class PropertyMonitor(object):
     def on_msg__a(self, msg, stamp):
         with self._lock:
             if self._state == 2:
-                self._pool.append(MsgRecord('/a', stamp, msg))
-                return True
+                return False # nothing to do
+
             if self._state == 3:
                 self._pool.append(MsgRecord('/a', stamp, msg))
                 self._state = 2
@@ -91,6 +96,7 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
 
     def _noop(self, *args):
         pass
@@ -108,6 +114,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -123,6 +130,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -211,6 +222,7 @@ class PropertyMonitor(object):
         self.time_shutdown = -1
         self.time_state = -1
 
+
     def _noop(self, *args):
         pass
 
@@ -227,6 +239,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -242,6 +255,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -293,9 +310,8 @@ class PropertyMonitor(object):
     def on_msg__a(self, msg, stamp):
         with self._lock:
             if self._state == 2:
-                if (msg.data > 0):
-                    self._pool.append(MsgRecord('/a', stamp, msg))
-                    return True
+                return False # nothing to do
+
             if self._state == 3:
                 if (msg.data > 0):
                     self._pool.append(MsgRecord('/a', stamp, msg))
@@ -310,6 +326,7 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
 
     def _noop(self, *args):
         pass
@@ -327,6 +344,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -342,6 +360,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -433,6 +455,7 @@ class PropertyMonitor(object):
         self.time_shutdown = -1
         self.time_state = -1
 
+
     def _noop(self, *args):
         pass
 
@@ -449,6 +472,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -464,6 +488,11 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a1': self.on_msg__a1,
+            '/a2': self.on_msg__a2,
+        }
 
     @property
     def verdict(self):
@@ -575,6 +604,7 @@ class PropertyMonitor(object):
         self.time_shutdown = -1
         self.time_state = -1
 
+
     def _noop(self, *args):
         pass
 
@@ -591,6 +621,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -606,6 +637,11 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b2': self.on_msg__b2,
+            '/a': self.on_msg__a,
+            '/b1': self.on_msg__b1,
+        }
 
     @property
     def verdict(self):
@@ -717,6 +753,7 @@ class PropertyMonitor(object):
         self.time_shutdown = -1
         self.time_state = -1
 
+
     def _noop(self, *args):
         pass
 
@@ -733,6 +770,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -748,6 +786,11 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+            '/p': self.on_msg__p,
+        }
 
     @property
     def verdict(self):
@@ -839,7 +882,7 @@ class PropertyMonitor(object):
                     self.time_state = stamp
             if self._state == 1:
                 self.witness.append(MsgRecord('/p', stamp, msg))
-                self._state = 2
+                self._state = 3
                 self.time_state = stamp
                 self.on_enter_scope(stamp)
                 return True
@@ -851,6 +894,7 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
 
     def _noop(self, *args):
         pass
@@ -868,6 +912,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -883,6 +928,11 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+            '/p': self.on_msg__p,
+        }
 
     @property
     def verdict(self):
@@ -978,7 +1028,7 @@ class PropertyMonitor(object):
             if self._state == 1:
                 if msg.phi:
                     self.witness.append(MsgRecord('/p', stamp, msg))
-                    self._state = 2
+                    self._state = 3
                     self.time_state = stamp
                     self.on_enter_scope(stamp)
                     return True
@@ -990,6 +1040,7 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
 
     def _noop(self, *args):
         pass
@@ -1007,6 +1058,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -1022,6 +1074,11 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/q': self.on_msg__q,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -1140,6 +1197,7 @@ class PropertyMonitor(object):
         self.time_shutdown = -1
         self.time_state = -1
 
+
     def _noop(self, *args):
         pass
 
@@ -1156,6 +1214,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -1171,6 +1230,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -1274,6 +1337,7 @@ class PropertyMonitor(object):
         self.time_shutdown = -1
         self.time_state = -1
 
+
     def _noop(self, *args):
         pass
 
@@ -1290,6 +1354,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -1305,6 +1370,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -1407,6 +1476,7 @@ class PropertyMonitor(object):
         self.time_shutdown = -1
         self.time_state = -1
 
+
     def _noop(self, *args):
         pass
 
@@ -1423,6 +1493,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -1438,6 +1509,12 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/a': self.on_msg__a,
+            '/b': self.on_msg__b,
+            '/q': self.on_msg__q,
+            '/p': self.on_msg__p,
+        }
 
     @property
     def verdict(self):
@@ -1473,9 +1550,8 @@ class PropertyMonitor(object):
     def on_msg__a(self, msg, stamp):
         with self._lock:
             if self._state == 2:
-                if msg.alpha:
-                    self._pool.append(MsgRecord('/a', stamp, msg))
-                    return True
+                return False # nothing to do
+
             if self._state == 3:
                 if msg.alpha:
                     self._pool.append(MsgRecord('/a', stamp, msg))
@@ -1524,7 +1600,7 @@ class PropertyMonitor(object):
             if self._state == 1:
                 if msg.phi:
                     self.witness.append(MsgRecord('/p', stamp, msg))
-                    self._state = 2
+                    self._state = 3
                     self.time_state = stamp
                     self.on_enter_scope(stamp)
                     return True
@@ -1536,6 +1612,7 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
 
     def _noop(self, *args):
         pass
@@ -1553,6 +1630,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -1568,6 +1646,12 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/a': self.on_msg__a,
+            '/b': self.on_msg__b,
+            '/q': self.on_msg__q,
+            '/p': self.on_msg__p,
+        }
 
     @property
     def verdict(self):
@@ -1690,7 +1774,7 @@ class PropertyMonitor(object):
             if self._state == 1:
                 if msg.phi:
                     self.witness.append(MsgRecord('/p', stamp, msg))
-                    self._state = 2
+                    self._state = 3
                     self.time_state = stamp
                     self.on_enter_scope(stamp)
                     return True
@@ -1702,6 +1786,7 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
 
     def _noop(self, *args):
         pass
@@ -1719,6 +1804,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -1734,6 +1820,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -1787,21 +1877,11 @@ class PropertyMonitor(object):
         with self._lock:
             if self._state == 2:
                 rec = MsgRecord('/a', stamp, msg)
-                for i in range(len(self._pool), 0, -1):
-                    if stamp >= self._pool[i-1].timestamp:
-                        self._pool.insert(i, rec)
-                        break
-                else:
-                    self._pool.appendleft(rec)
+                self._pool_insert(rec)
                 return True
             if self._state == 3:
                 rec = MsgRecord('/a', stamp, msg)
-                for i in range(len(self._pool), 0, -1):
-                    if stamp >= self._pool[i-1].timestamp:
-                        self._pool.insert(i, rec)
-                        break
-                else:
-                    self._pool.appendleft(rec)
+                self._pool_insert(rec)
                 self._state = 2
                 self.time_state = stamp
                 return True
@@ -1813,6 +1893,27 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
 
     def _noop(self, *args):
         pass
@@ -1830,6 +1931,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -1845,6 +1947,10 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b': self.on_msg__b,
+            '/a': self.on_msg__a,
+        }
 
     @property
     def verdict(self):
@@ -1921,22 +2027,12 @@ class PropertyMonitor(object):
             if self._state == 2:
                 if (msg.x > 0):
                     rec = MsgRecord('/a', stamp, msg)
-                    for i in range(len(self._pool), 0, -1):
-                        if stamp >= self._pool[i-1].timestamp:
-                            self._pool.insert(i, rec)
-                            break
-                    else:
-                        self._pool.appendleft(rec)
+                    self._pool_insert(rec)
                     return True
             if self._state == 3:
                 if (msg.x > 0):
                     rec = MsgRecord('/a', stamp, msg)
-                    for i in range(len(self._pool), 0, -1):
-                        if stamp >= self._pool[i-1].timestamp:
-                            self._pool.insert(i, rec)
-                            break
-                    else:
-                        self._pool.appendleft(rec)
+                    self._pool_insert(rec)
                     self._state = 2
                     self.time_state = stamp
                     return True
@@ -1948,6 +2044,27 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
 
     def _noop(self, *args):
         pass
@@ -1965,6 +2082,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -1980,6 +2098,11 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b2': self.on_msg__b2,
+            '/a': self.on_msg__a,
+            '/b1': self.on_msg__b1,
+        }
 
     @property
     def verdict(self):
@@ -2056,22 +2179,12 @@ class PropertyMonitor(object):
             if self._state == 2:
                 if (msg.x > 0):
                     rec = MsgRecord('/a', stamp, msg)
-                    for i in range(len(self._pool), 0, -1):
-                        if stamp >= self._pool[i-1].timestamp:
-                            self._pool.insert(i, rec)
-                            break
-                    else:
-                        self._pool.appendleft(rec)
+                    self._pool_insert(rec)
                     return True
             if self._state == 3:
                 if (msg.x > 0):
                     rec = MsgRecord('/a', stamp, msg)
-                    for i in range(len(self._pool), 0, -1):
-                        if stamp >= self._pool[i-1].timestamp:
-                            self._pool.insert(i, rec)
-                            break
-                    else:
-                        self._pool.appendleft(rec)
+                    self._pool_insert(rec)
                     self._state = 2
                     self.time_state = stamp
                     return True
@@ -2107,6 +2220,27 @@ class PropertyMonitor(object):
         self.time_shutdown = -1
         self.time_state = -1
 
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
+
     def _noop(self, *args):
         pass
 
@@ -2123,6 +2257,7 @@ class PropertyMonitor(object):
         'time_launch',    # when was the monitor launched
         'time_shutdown',  # when was the monitor shutdown
         'time_state',     # when did the last state transition occur
+        'cb_map',         # mapping of topic names to callback functions
     )
 
     PROP_ID = 'None'
@@ -2138,6 +2273,13 @@ class PropertyMonitor(object):
         self.on_violation = self._noop
         self.on_success = self._noop
         self._state = 0
+        self.cb_map = {
+            '/b1': self.on_msg__b1,
+            '/b2': self.on_msg__b2,
+            '/a': self.on_msg__a,
+            '/q': self.on_msg__q,
+            '/p': self.on_msg__p,
+        }
 
     @property
     def verdict(self):
@@ -2242,24 +2384,14 @@ class PropertyMonitor(object):
                 v_P = self.witness[0].msg
                 if (msg.x == v_P.x):
                     rec = MsgRecord('/a', stamp, msg)
-                    for i in range(len(self._pool), 0, -1):
-                        if stamp >= self._pool[i-1].timestamp:
-                            self._pool.insert(i, rec)
-                            break
-                    else:
-                        self._pool.appendleft(rec)
+                    self._pool_insert(rec)
                     return True
             if self._state == 3:
                 assert len(self.witness) >= 1, 'missing activator'
                 v_P = self.witness[0].msg
                 if (msg.x == v_P.x):
                     rec = MsgRecord('/a', stamp, msg)
-                    for i in range(len(self._pool), 0, -1):
-                        if stamp >= self._pool[i-1].timestamp:
-                            self._pool.insert(i, rec)
-                            break
-                    else:
-                        self._pool.appendleft(rec)
+                    self._pool_insert(rec)
                     self._state = 2
                     self.time_state = stamp
                     return True
@@ -2307,7 +2439,7 @@ class PropertyMonitor(object):
                     self.time_state = stamp
             if self._state == 1:
                 self.witness.append(MsgRecord('/p', stamp, msg))
-                self._state = 2
+                self._state = 3
                 self.time_state = stamp
                 self.on_enter_scope(stamp)
                 return True
@@ -2319,6 +2451,27 @@ class PropertyMonitor(object):
         self.time_launch = -1
         self.time_shutdown = -1
         self.time_state = -1
+
+    def _pool_insert(self, rec):
+        # this method is only needed to ensure Python 2.7 compatibility
+        if not self._pool:
+            return self._pool.append(rec)
+        stamp = rec.timestamp
+        if len(self._pool) == 1:
+            if stamp >= self._pool[0].timestamp:
+                return self._pool.append(rec)
+            return self._pool.appendleft(rec)
+        for i in range(len(self._pool), 0, -1):
+            if stamp >= self._pool[i-1].timestamp:
+                try:
+                    self._pool.insert(i, rec) # Python >= 3.5
+                except AttributeError as e:
+                    tmp = [self._pool.pop() for j in range(i, len(self._pool))]
+                    self._pool.append(rec)
+                    self._pool.extend(reversed(tmp))
+                break
+        else:
+            self._pool.appendleft(rec)
 
     def _noop(self, *args):
         pass

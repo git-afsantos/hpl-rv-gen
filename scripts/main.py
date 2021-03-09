@@ -278,9 +278,6 @@ after /map as M:
         ( pose.pose.position.y < @M.info.origin.position.y )
         or
         ( pose.pose.position.y > (@M.info.height * @M.info.resolution + @M.info.origin.position.y) )
-        or
-        ( @M.data[int((pose.pose.position.y + @M.info.origin.position.y) * @M.info.width
-                  + (pose.pose.position.x + @M.info.origin.position.x))] != 0 )
     }
 ''',
 
@@ -297,9 +294,6 @@ after /map as M:
         ( pose.position.y < @M.info.origin.position.y )
         or
         ( pose.position.y > (@M.info.height * @M.info.resolution + @M.info.origin.position.y) )
-        or
-        ( @M.data[int((pose.position.y + @M.info.origin.position.y) * @M.info.width
-                  + (pose.position.x + @M.info.origin.position.x))] != 0 )
     }
 ''',
 
@@ -318,8 +312,16 @@ after /map as M:
             or
             ( poses[@i].pose.position.y > (@M.info.height * @M.info.resolution + @M.info.origin.position.y) )
             or
-            ( @M.data[int((poses[@i].pose.position.y + @M.info.origin.position.y) * @M.info.width
-                      + (poses[@i].pose.position.x + @M.info.origin.position.x))] != 0 )
+            ( @M.data[int(
+                int(
+                    (poses[@i].pose.position.y - @M.info.origin.position.y)
+                    / @M.info.resolution
+                ) * @M.info.width
+                + int(
+                    (poses[@i].pose.position.x - @M.info.origin.position.x)
+                    / @M.info.resolution
+                  )
+            )] != 0 )
         )
     }
 ''',
@@ -327,21 +329,21 @@ after /map as M:
 '''
 # id: valid_plan_pub_distance
 # title: "Valid Distances in Plans"
-# description: "FIXME Between two consecutive poses, the distance should not exceed 3 times the map's resolution."
+# description: "Between two consecutive poses, the distance should not exceed 3 times the map's resolution."
 after /map as M:
     no /Agrob_path/plan_pub {
         exists i in [0 to (len(poses) - 2)]: (
-            ( abs(poses[@i].pose.position.x - poses[@i+1].pose.position.x)
-                < (2 * @M.info.resolution) )
+            ( sqrt(
+                ((poses[@i].pose.position.x - poses[@i+1].pose.position.x) ** 2)
+                +
+                ((poses[@i].pose.position.y - poses[@i+1].pose.position.y) ** 2)
+            ) < (2 * @M.info.resolution) )
             or
-            ( abs(poses[@i].pose.position.x - poses[@i+1].pose.position.x)
-                > (3 * @M.info.resolution) )
-            or
-            ( abs(poses[@i].pose.position.y - poses[@i+1].pose.position.y)
-                < (2 * @M.info.resolution) )
-            or
-            ( abs(poses[@i].pose.position.y - poses[@i+1].pose.position.y)
-                > (3 * @M.info.resolution) )
+            ( sqrt(
+                ((poses[@i].pose.position.x - poses[@i+1].pose.position.x) ** 2)
+                +
+                ((poses[@i].pose.position.y - poses[@i+1].pose.position.y) ** 2)
+            ) > (3.2 * @M.info.resolution) )
         )
     }
 ''',
@@ -349,14 +351,19 @@ after /map as M:
 '''
 # id: valid_plan_pub_angles
 # title: "Valid Orientations in Plans"
-# description: "Between two consecutive poses, the difference of orientations should not exceed 22.5 degrees."
+# description: "Between two consecutive poses, the difference of orientations should not exceed 22.5 degrees (with some tolerance)."
 globally:
     no /Agrob_path/plan_pub {
         exists i in [0 to (len(poses) - 2)]: (
-            deg(abs(
+            ( deg(abs(
                 yaw(poses[@i+1].pose.orientation)
                 - yaw(poses[@i].pose.orientation)
-            )) > 22.5
+              )) > 22.505 )
+            and
+            ( deg(abs(
+                yaw(poses[@i+1].pose.orientation)
+                - yaw(poses[@i].pose.orientation)
+              )) < 337.495 )
         )
     }
 ''',
@@ -560,9 +567,9 @@ until /Agrob_path/agrob_pp/state {
 
 '''
 # id: spurious_plans
-# title: "No Plans Before PLANNING"
-# description: "No plans are published before the first PLANNING state."
-until /Agrob_path/agrob_pp/state { data = "PLANNING" }:
+# title: "No Plans Before READY_TO_PLAN"
+# description: "No plans are published before the first READY_TO_PLAN state."
+until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
     no (
         /Agrob_path/plan_pub
         or
@@ -575,11 +582,11 @@ until /Agrob_path/agrob_pp/state { data = "PLANNING" }:
 '''
 # id: plan_requires_success
 # title: "Plan Requires PLANNING_SUCCESSFUL"
-# description: "Cannot publish a plan without visiting PLANNING_SUCCESSFUL."
+# description: "Cannot publish a non-empty plan without visiting PLANNING_SUCCESSFUL."
 after /Agrob_path/agrob_pp/state { data = "PLANNING" }
 until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
-    /Agrob_path/plan_pub
-    requires /Agrob_path/agrob_pp/state { data = "PLANNING_SUCCESSFUL" }
+    /Agrob_path/plan_pub { len(poses) > 0 }
+    causes /Agrob_path/agrob_pp/state { data = "PLANNING_SUCCESSFUL" }
 ''',
 
 '''
@@ -603,6 +610,26 @@ until /Agrob_path/agrob_pp/state { data = "READY_TO_PLAN" }:
     /Agrob_path/agrob_pp/state { data = "PLANNING_SUCCESSFUL" }
     causes /Agrob_path/plan_pub
     within 1 s
+''',
+
+'''
+# id: plan_requires_goal
+# title: "Plan Requires Valid Goal"
+# description: "Publishing a plan requires a goal pose on an empty map cell."
+after /map as M:
+    /Agrob_path/plan_pub { len(poses) > 0 }
+    requires /Agrob_path/goalPose {
+        @M.data[int(
+            int(
+                (pose.position.y - @M.info.origin.position.y)
+                / @M.info.resolution
+            ) * @M.info.width
+            + int(
+                (pose.position.x - @M.info.origin.position.x)
+                / @M.info.resolution
+              )
+        )] = 0
+    } within 60 s
 ''',
 
 '''
