@@ -26,6 +26,7 @@ from .absence_traces import *
 from .existence_traces import *
 from .precedence_traces import *
 from .response_traces import *
+from .prevention_traces import *
 
 ###############################################################################
 # Test Case Generation
@@ -86,15 +87,22 @@ def response_properties():
     yield after_until_causes_ref_within()
 
 def prevention_properties():
-    # yield globally_no()
-    # yield globally_no_within()
-    # yield after_no()
-    # yield after_no_within()
-    # yield until_no()
-    # yield until_no_within()
-    # yield after_until_no()
-    # yield after_until_no_within()
-    return ()
+    yield globally_forbids()
+    yield globally_forbids_ref()
+    yield globally_forbids_within()
+    yield globally_forbids_ref_within()
+    yield after_forbids()
+    yield after_forbids_ref()
+    yield after_forbids_within()
+    yield after_forbids_ref_within()
+    yield until_forbids()
+    yield until_forbids_ref()
+    yield until_forbids_within()
+    yield until_forbids_ref_within()
+    yield after_until_forbids()
+    yield after_until_forbids_ref()
+    yield after_until_forbids_within()
+    yield after_until_forbids_ref_within()
 
 def all_types_of_property():
     # example = text, traces
