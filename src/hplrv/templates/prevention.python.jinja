@@ -73,9 +73,13 @@ v_{{ event.activator }} = self.witness[0].msg
 {{ G.add_to_pool(sm, topic) }}
         {%- endcall %}
     {% elif from_state == G.STATE_ACTIVE %}
-        {% call G.do_if(event.predicate) %}
+        {% if sm.pool_size == 1 and sm.timeout < 0 %}
+return False # nothing to do
+        {% else %}
+            {% call G.do_if(event.predicate) %}
 {{ G.add_to_pool(sm, topic) }}
-        {%- endcall %}
+            {%- endcall %}
+        {% endif %}
     {% else %}
 assert False, 'unexpected source state: {{ from_state }}'
     {% endif %}
