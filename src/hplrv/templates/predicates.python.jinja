@@ -160,6 +160,20 @@ range({{ l }}, {{ h }})
 ({{ a }} is {{ b }})
 {%- elif op.operator == '=' -%}
 ({{ a }} == {{ b }})
+{%- elif op.operator == 'in' and op.operand2.is_value and op.operand2.is_range -%}
+    {% if op.operand2.exclude_min -%}
+        {% set lop = '>' %}
+    {%- else -%}
+        {% set lop = '>=' %}
+    {%- endif %}
+    {% if op.operand2.exclude_max -%}
+        {% set rop = '<' %}
+    {%- else -%}
+        {% set rop = '<=' %}
+    {%- endif %}
+    {% set lb = _inline_expression(op.operand2.min_value, msg) %}
+    {% set ub = _inline_expression(op.operand2.max_value, msg) %}
+({{ a }} {{ lop }} {{ lb }} and {{ a }} {{ rop }} {{ ub }})
 {%- else -%}
     {%- if op.infix -%}
 ({{ a }} {{ op.operator }} {{ b }})
