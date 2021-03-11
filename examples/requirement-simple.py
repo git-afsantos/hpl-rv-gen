@@ -2416,7 +2416,7 @@ class PropertyMonitor(object):
     def on_msg__p2(self, msg, stamp):
         with self._lock:
             if self._state == 1:
-                if (msg.y in range(int(0)+1, int(10))):
+                if (msg.y > 0 and msg.y < 10):
                     self.witness.append(MsgRecord('/p2', stamp, msg))
                     self._state = 2
                     self.time_state = stamp
@@ -2566,7 +2566,7 @@ class PropertyMonitor(object):
                     self._state = 2
                     self.time_state = stamp
             if self._state == 1:
-                if (msg.y in range(int(0)+1, int(10))):
+                if (msg.y > 0 and msg.y < 10):
                     self.witness.append(MsgRecord('/p2', stamp, msg))
                     self._state = 2
                     self.time_state = stamp

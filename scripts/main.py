@@ -10,7 +10,7 @@
 
 from __future__ import print_function
 
-from .rendering import TemplateRenderer
+from hplrv.rendering import TemplateRenderer
 
 
 ###############################################################################
@@ -657,7 +657,7 @@ def test_me():
     p = property_parser()
     r = TemplateRenderer()
     outputs = []
-    for text in AGROB_EXAMPLES:
+    for text in PRECEDENCE_EXAMPLES:
         hpl_property = p.parse(text)
         code = r.render_monitor(hpl_property)
         outputs.append(code)
