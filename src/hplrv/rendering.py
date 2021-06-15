@@ -34,7 +34,41 @@ class TemplateRenderer(object):
             autoescape=False
         )
 
+    def render_rospy_node(self, hpl_properties, topic_types):
+        class_names = []
+        topics = {}
+        callbacks = {}
+        monitor_classes = []
+        for p in hpl_properties:
+            builder, template_file = self._template(p, True)
+            i = len(class_names)
+            class_names.append(builder.class_name)
+            for name in builder.on_msg:
+                topics[name] = topic_types[name]
+                if name not in callbacks:
+                    callbacks[name] = set()
+                callbacks[name].add(i)
+            data = {'state_machine': builder}
+            monitor_classes.append(self._render_template(template_file, data))
+        ros_imports = {'std_msgs'}
+        for name in topics.values():
+            pkg, msg = name.split('/')
+            ros_imports.add(pkg)
+        data = {
+            'class_names': class_names,
+            'monitor_classes': monitor_classes,
+            'topics': topics,
+            'ros_imports': ros_imports,
+            'callbacks': callbacks,
+        }
+        return self._render_template('node.python.jinja', data)
+
     def render_monitor(self, hpl_property, id_as_class=True):
+        builder, template_file = self._template(hpl_property, id_as_class)
+        data = {'state_machine': builder}
+        return self._render_template(template_file, data)
+
+    def _template(self, hpl_property, id_as_class):
         if hpl_property.pattern.is_absence:
             builder = AbsenceBuilder(hpl_property)
             template_file = 'absence.python.jinja'
@@ -59,8 +93,7 @@ class TemplateRenderer(object):
             name = hpl_property.metadata.get('id', 'Property')
             name = ''.join(word.title() for word in name.split("_") if word)
             builder.class_name = name + 'Monitor'
-        data = {'state_machine': builder}
-        return self._render_template(template_file, data)
+        return (builder, template_file)
 
     def _render_template(self, template_file, data, strip=True):
         template = self.jinja_env.get_template(template_file)
