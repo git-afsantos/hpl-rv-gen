@@ -78,11 +78,11 @@ class {{ sm.class_name }}(object):
 
     @property
     def verdict(self):
-        with self._lock:
-            if self._state == {{ STATE_TRUE }}:
-                return True
-            if self._state == {{ STATE_FALSE }}:
-                return False
+        # with self._lock:
+        if self._state == {{ STATE_TRUE }}:
+            return True
+        if self._state == {{ STATE_FALSE }}:
+            return False
         return None
 
     def on_launch(self, stamp):
