@@ -73,13 +73,13 @@ class HplMonitorNode(object):
             {{ cname }}(),
         {% endfor %}
         ]
-        self.pubs = {}
-        for mon in self.monitors:
-            ns = '~' + mon.PROP_ID
-            self.pubs[mon.PROP_ID] = rospy.Publisher(ns + '/verdict',
+        self.pubs = []
+        for i in range(len(self.monitors)):
+            mon = self.monitors[i]
+            self.pubs[i] = rospy.Publisher('~p{}/verdict'.format(i),
                 std_msgs.Bool, queue_size=1, latch=True)
-            mon.on_success = partial(self._on_success, mon)
-            mon.on_violation = partial(self._on_failure, mon)
+            mon.on_success = partial(self._on_success, i)
+            mon.on_violation = partial(self._on_failure, i)
         self.subs = [
             {# -#}
         {% for topic, typename in topics.items() %}
@@ -114,15 +114,17 @@ class HplMonitorNode(object):
         {% endfor %}
 {% endfor %}
 
-    def _on_success(self, mon):
+    def _on_success(self, i):
+        mon = self.monitors[i]
         assert mon.verdict is True
         # t = rospy.Time.from_sec(mon.time_state)
-        self.success[mon.PROP_ID].publish(True)
+        self.pubs[i].publish(True)
 
-    def _on_failure(self, mon):
+    def _on_failure(self, i):
+        mon = self.monitors[i]
         assert mon.verdict is False
         # t = rospy.Time.from_sec(mon.time_state)
-        self.failure[mon.PROP_ID].publish(False)
+        self.pubs[i].publish(False)
 
 
 def main():

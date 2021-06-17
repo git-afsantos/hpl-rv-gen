@@ -42,6 +42,7 @@ class TemplateRenderer(object):
         for p in hpl_properties:
             builder, template_file = self._template(p, True)
             i = len(class_names)
+            builder.class_name = 'Property{}Monitor'.format(i)
             class_names.append(builder.class_name)
             for name in builder.on_msg:
                 topics[name] = topic_types[name]
