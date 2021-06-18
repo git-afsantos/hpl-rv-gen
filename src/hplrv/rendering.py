@@ -64,8 +64,10 @@ class TemplateRenderer(object):
         }
         return self._render_template('node.python.jinja', data)
 
-    def render_monitor(self, hpl_property, id_as_class=True):
+    def render_monitor(self, hpl_property, class_name=None, id_as_class=True):
         builder, template_file = self._template(hpl_property, id_as_class)
+        if class_name:
+            builder.class_name = class_name
         data = {'state_machine': builder}
         return self._render_template(template_file, data)
 
