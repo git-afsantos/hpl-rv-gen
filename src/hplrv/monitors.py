@@ -269,7 +269,8 @@ class RequirementBuilder(PatternBasedBuilder):
             if self._activator and e.contains_reference(self._activator):
                 alias = self._activator
             if self._behaviour:
-                phi, psi = refactor_reference(e.predicate, self._behaviour)
+                phi = e.predicate.clone()
+                phi, psi = refactor_reference(phi, self._behaviour)
                 if not psi.is_vacuous:
                     replace_this_with_var(psi, '1')
                     replace_var_with_this(psi, self._behaviour)
