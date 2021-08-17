@@ -64,12 +64,13 @@ class TemplateRenderer(object):
         }
         return self._render_template('node.python.jinja', data)
 
-    def render_monitor(self, hpl_property, class_name=None, id_as_class=True):
+    def render_monitor(self, hpl_property, class_name=None, id_as_class=True,
+            encoding=None):
         builder, template_file = self._template(hpl_property, id_as_class)
         if class_name:
             builder.class_name = class_name
         data = {'state_machine': builder}
-        return self._render_template(template_file, data)
+        return self._render_template(template_file, data, encoding=encoding)
 
     def _template(self, hpl_property, id_as_class):
         if hpl_property.pattern.is_absence:
@@ -98,9 +99,11 @@ class TemplateRenderer(object):
             builder.class_name = name + 'Monitor'
         return (builder, template_file)
 
-    def _render_template(self, template_file, data, strip=True):
+    def _render_template(self, template_file, data, strip=True, encoding=None):
         template = self.jinja_env.get_template(template_file)
-        text = template.render(**data).encode('utf-8')
+        text = template.render(**data)
         if strip:
             text = text.strip()
-        return text
+        if encoding is None:
+            return text
+        return text.encode(encoding)
