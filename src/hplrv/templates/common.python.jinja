@@ -79,11 +79,38 @@ class {{ sm.class_name }}(object):
     @property
     def verdict(self):
         # with self._lock:
-        if self._state == {{ STATE_TRUE }}:
+        s = self._state
+        if s == {{ STATE_TRUE }}:
             return True
-        if self._state == {{ STATE_FALSE }}:
+        if s == {{ STATE_FALSE }}:
             return False
         return None
+
+    @property
+    def is_online_state(self):
+        # with self._lock:
+        s = self._state
+        return s != {{ STATE_OFF }}
+
+    @property
+    def is_inactive_state(self):
+        # with self._lock:
+        return self._state == {{ STATE_INACTIVE }}
+
+    @property
+    def is_active_state(self):
+        # with self._lock:
+        return self._state == {{ STATE_ACTIVE }}
+
+    @property
+    def is_safe_state(self):
+        # with self._lock:
+        return self._state == {{ STATE_SAFE }}
+
+    @property
+    def is_falsifiable_state(self):
+        # with self._lock:
+        return self._state == {{ STATE_ACTIVE }}
 
     def on_launch(self, stamp):
         with self._lock:
